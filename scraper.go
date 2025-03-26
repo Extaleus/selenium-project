@@ -43,13 +43,13 @@ func main() {
 	authFlow(driver)
 
 	//logout
-	logOut(driver)
+	// logOut(driver)
 
-	time.Sleep(3 * time.Second)
+	// time.Sleep(3 * time.Second)
 	// pageScreenshot(driver, "screen11")
 
 	//clean up cookies
-	cleanUpAllCookies(driver)
+	// cleanUpAllCookies(driver)
 }
 
 // func pageScreenshot(driver selenium.WebDriver, fileName string) {
@@ -253,61 +253,61 @@ func getAllCookies(driver selenium.WebDriver) {
 	fmt.Println("Успешно сохранили Cookies в allCookies.json")
 }
 
-func cleanUpAllCookies(driver selenium.WebDriver) {
-	err := driver.DeleteAllCookies()
-	if err != nil {
-		log.Printf("Не удалось удалить все cookies: %v", err)
-	}
-}
+// func cleanUpAllCookies(driver selenium.WebDriver) {
+// 	err := driver.DeleteAllCookies()
+// 	if err != nil {
+// 		log.Printf("Не удалось удалить все cookies: %v", err)
+// 	}
+// }
 
-func logOut(driver selenium.WebDriver) {
-	//find with waiting
-	var elemMenu selenium.WebElement
-	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
-		foundElem, err := driver.FindElement(selenium.ByXPATH,
-			"//div[@role='button']"+
-				"[.//*[local-name()='svg' and @aria-label='Ещё']]"+
-				"[.//*[local-name()='title' and text()='Ещё']]"+
-				"[.//*[local-name()='rect']]"+
-				"[.//*[local-name()='rect']]")
-		if err != nil {
-			panic(fmt.Errorf("не удалось найти кнопку 'Дополнительное меню': %v", err))
-		}
-		elemMenu = foundElem
-		visible, err := foundElem.IsDisplayed()
-		return visible, err
-	}, 10*time.Second)
-	if err != nil {
-		panic(fmt.Errorf("не удалось найти элемент: %v", err))
-	}
+// func logOut(driver selenium.WebDriver) {
+// 	//find with waiting
+// 	var elemMenu selenium.WebElement
+// 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+// 		foundElem, err := driver.FindElement(selenium.ByXPATH,
+// 			"//div[@role='button']"+
+// 				"[.//*[local-name()='svg' and @aria-label='Ещё']]"+
+// 				"[.//*[local-name()='title' and text()='Ещё']]"+
+// 				"[.//*[local-name()='rect']]"+
+// 				"[.//*[local-name()='rect']]")
+// 		if err != nil {
+// 			panic(fmt.Errorf("не удалось найти кнопку 'Дополнительное меню': %v", err))
+// 		}
+// 		elemMenu = foundElem
+// 		visible, err := foundElem.IsDisplayed()
+// 		return visible, err
+// 	}, 10*time.Second)
+// 	if err != nil {
+// 		panic(fmt.Errorf("не удалось найти элемент: %v", err))
+// 	}
 
-	//click
-	time.Sleep(time.Duration(cryptoRandom(300, 500)) * time.Millisecond)
-	_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemMenu})
-	if err != nil {
-		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Дополнительное меню': %v", err))
-	}
-	fmt.Println("Успешно нажали на 'Дополнительное меню'")
+// 	//click
+// 	time.Sleep(time.Duration(cryptoRandom(300, 500)) * time.Millisecond)
+// 	_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemMenu})
+// 	if err != nil {
+// 		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Дополнительное меню': %v", err))
+// 	}
+// 	fmt.Println("Успешно нажали на 'Дополнительное меню'")
 
-	time.Sleep(2 * time.Second)
-	// pageScreenshot(driver, "screen8")
+// 	time.Sleep(2 * time.Second)
+// 	// pageScreenshot(driver, "screen8")
 
-	//tab to exit
-	for i := 0; i < 5; i++ {
-		driver.KeyDown(selenium.TabKey)
-		randDelay := cryptoRandom(50, 100)
-		time.Sleep(time.Duration(randDelay) * time.Millisecond)
-		driver.KeyUp(selenium.TabKey)
-		randDelay = cryptoRandom(200, 400)
-		time.Sleep(time.Duration(randDelay) * time.Millisecond)
-	}
+// 	//tab to exit
+// 	for i := 0; i < 5; i++ {
+// 		driver.KeyDown(selenium.TabKey)
+// 		randDelay := cryptoRandom(50, 100)
+// 		time.Sleep(time.Duration(randDelay) * time.Millisecond)
+// 		driver.KeyUp(selenium.TabKey)
+// 		randDelay = cryptoRandom(200, 400)
+// 		time.Sleep(time.Duration(randDelay) * time.Millisecond)
+// 	}
 
-	// pageScreenshot(driver, "screen9")
+// 	// pageScreenshot(driver, "screen9")
 
-	//exit
-	driver.KeyDown(selenium.EnterKey)
-	randDelay := cryptoRandom(50, 100)
-	time.Sleep(time.Duration(randDelay) * time.Millisecond)
-	driver.KeyUp(selenium.EnterKey)
-	fmt.Println("Успешно нажали на 'Выход'")
-}
+// 	//exit
+// 	driver.KeyDown(selenium.EnterKey)
+// 	randDelay := cryptoRandom(50, 100)
+// 	time.Sleep(time.Duration(randDelay) * time.Millisecond)
+// 	driver.KeyUp(selenium.EnterKey)
+// 	fmt.Println("Успешно нажали на 'Выход'")
+// }

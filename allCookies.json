@@ -1,11 +1,11 @@
 [
   {
     "name": "sessionid",
-    "value": "73470586639%3Ajrfz70jfuNorTW%3A21%3AAYdlX96IXu_eWUaUzHk9M32K3YdNXstXQD0y3Vwxkw",
+    "value": "73470586639%3AOWBPbcyy5whnWW%3A12%3AAYcBNkwXfovFQqhYgMs4OqmCrNzMs9AtqbPqOOp7Mg",
     "path": "/",
     "domain": ".threads.net",
     "secure": true,
-    "expiry": 1774537303
+    "expiry": 1774558473
   },
   {
     "name": "ds_user_id",
@@ -13,31 +13,31 @@
     "path": "/",
     "domain": ".threads.net",
     "secure": true,
-    "expiry": 1750777311
+    "expiry": 1750798473
   },
   {
     "name": "mid",
-    "value": "Z-QWzAAEAAGiSBflTi1uD_gvSJrZ",
+    "value": "Z-RpgAAEAAEGYFOLVglVGGmYDH9N",
     "path": "/",
     "domain": ".threads.net",
     "secure": true,
-    "expiry": 1777561303
+    "expiry": 1777582473
   },
   {
     "name": "ig_did",
-    "value": "AD610D78-83B7-4815-B216-5E81DE38C381",
+    "value": "E616B3C9-9951-4D5F-8FD2-C93946D35035",
     "path": "/",
     "domain": ".threads.net",
     "secure": true,
-    "expiry": 1774537303
+    "expiry": 1774558473
   },
   {
     "name": "csrftoken",
-    "value": "bH1aGaZmh0dvZ491zknM85sUFSf8Blgy",
+    "value": "0qS8kX0sUzXPs0sSbqw8pKHDhPn7rEuL",
     "path": "/",
     "domain": ".threads.net",
     "secure": true,
-    "expiry": 1774450911
+    "expiry": 1774472073
   },
   {
     "name": "cb",
@@ -45,6 +45,6 @@
     "path": "/",
     "domain": ".threads.net",
     "secure": true,
-    "expiry": 1777561284
+    "expiry": 1777582456
   }
 ]
