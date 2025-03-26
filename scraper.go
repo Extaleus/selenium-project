@@ -40,21 +40,72 @@ func main() {
 		log.Fatal("Error:", err)
 	}
 
-	err = driver.Get("https://www.threads.net/login/")
+	authFlow(driver)
+
+	//logout
+	logOut(driver)
+
+	time.Sleep(3 * time.Second)
+	// pageScreenshot(driver, "screen11")
+
+	//clean up cookies
+	cleanUpAllCookies(driver)
+}
+
+// func pageScreenshot(driver selenium.WebDriver, fileName string) {
+// 	byteImg, err := driver.Screenshot()
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	f, err := os.Create("./screenshots/" + fileName + ".png")
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	f.Write(byteImg)
+// 	f.Close()
+// }
+
+func authFlow(driver selenium.WebDriver) {
+	err := driver.Get("https://www.threads.net/login/")
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
 
-	driver.SetPageLoadTimeout(100 * time.Second)
+	// driver.SetPageLoadTimeout(100 * time.Second)
 
-	PageScreenshot(driver, "screen1")
+	// pageScreenshot(driver, "screen1")
 	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "screen2")
+	// pageScreenshot(driver, "screen2")
 	time.Sleep(1 * time.Second)
 
+	acceptAllCookies(driver)
+
+	time.Sleep(2 * time.Second)
+	// pageScreenshot(driver, "screen3")
+
+	continueWithInstagram(driver)
+
+	time.Sleep(2 * time.Second)
+	// pageScreenshot(driver, "screen4")
+
+	fillCredsAndLogin(driver, "yourcreator32025", "Gagarin2$")
+
+	time.Sleep(10 * time.Second)
+	// pageScreenshot(driver, "screen7")
+
+	//get cookies
+	getAllCookies(driver)
+}
+
+func cryptoRandom(min, max int) int {
+	n, _ := rand.Int(rand.Reader, big.NewInt(int64(max-min+1)))
+	return int(n.Int64()) + min
+}
+
+func acceptAllCookies(driver selenium.WebDriver) {
 	var elemCookieAccept selenium.WebElement
 	//find with waiting
-	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 		if err != nil {
 			panic(fmt.Errorf("не удалось найти кнопку 'Разрешить все cookie': %v", err))
@@ -77,13 +128,12 @@ func main() {
 		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err))
 	}
 	fmt.Println("Успешно нажали на 'Разрешить все cookie'")
+}
 
-	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "screen3")
-
+func continueWithInstagram(driver selenium.WebDriver) {
 	//find with waiting
 	var elemContinueWithInstagram selenium.WebElement
-	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := wd.FindElement(selenium.ByXPATH, "//a[.//span[contains(text(), 'Продолжить с аккаунтом Instagram')]]")
 		if err != nil {
 			panic(fmt.Errorf("не удалось найти кнопку 'Продолжить с аккаунтом Instagram': %v", err))
@@ -107,13 +157,12 @@ func main() {
 		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Продолжить с аккаунтом Instagram': %v", err))
 	}
 	fmt.Println("Успешно нажали на 'Продолжить с аккаунтом Instagram'")
+}
 
-	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "screen4")
-
+func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	//find with waiting
 	var elemUsername selenium.WebElement
-	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Имя пользователя, номер телефона или электронный адрес']")
 		if err != nil {
 			panic(fmt.Errorf("не удалось найти кнопку 'Имя пользователя, номер телефона или электронный адрес': %v", err))
@@ -128,13 +177,13 @@ func main() {
 
 	//fill input
 	time.Sleep(time.Duration(cryptoRandom(300, 500)) * time.Millisecond)
-	err = elemUsername.SendKeys("yourcreator32025")
+	err = elemUsername.SendKeys(username)
 	if err != nil {
 		panic(fmt.Errorf("не удалось ввести 'username': %v", err))
 	}
 
 	time.Sleep(1 * time.Second)
-	PageScreenshot(driver, "screen5")
+	// pageScreenshot(driver, "screen5")
 
 	//find with waiting
 	var elemPassword selenium.WebElement
@@ -153,13 +202,13 @@ func main() {
 
 	//fill input
 	time.Sleep(time.Duration(cryptoRandom(300, 500)) * time.Millisecond)
-	err = elemPassword.SendKeys("Gagarin2$")
+	err = elemPassword.SendKeys(password)
 	if err != nil {
 		panic(fmt.Errorf("не удалось ввести 'password': %v", err))
 	}
 
 	time.Sleep(1 * time.Second)
-	PageScreenshot(driver, "screen6")
+	// pageScreenshot(driver, "screen6")
 
 	//find with waiting
 	var elemSignInButton selenium.WebElement
@@ -183,11 +232,9 @@ func main() {
 		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Войти': %v", err))
 	}
 	fmt.Println("Успешно нажали на 'Вход'")
+}
 
-	time.Sleep(20 * time.Second)
-	PageScreenshot(driver, "screen7")
-
-	//get cookies
+func getAllCookies(driver selenium.WebDriver) {
 	allCookies, err := driver.GetCookies()
 	if err != nil {
 		log.Fatal(err)
@@ -204,10 +251,19 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("Успешно сохранили Cookies в allCookies.json")
+}
 
+func cleanUpAllCookies(driver selenium.WebDriver) {
+	err := driver.DeleteAllCookies()
+	if err != nil {
+		log.Printf("Не удалось удалить все cookies: %v", err)
+	}
+}
+
+func logOut(driver selenium.WebDriver) {
 	//find with waiting
 	var elemMenu selenium.WebElement
-	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByXPATH,
 			"//div[@role='button']"+
 				"[.//*[local-name()='svg' and @aria-label='Ещё']]"+
@@ -234,7 +290,7 @@ func main() {
 	fmt.Println("Успешно нажали на 'Дополнительное меню'")
 
 	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "screen8")
+	// pageScreenshot(driver, "screen8")
 
 	//tab to exit
 	for i := 0; i < 5; i++ {
@@ -246,7 +302,7 @@ func main() {
 		time.Sleep(time.Duration(randDelay) * time.Millisecond)
 	}
 
-	PageScreenshot(driver, "screen9")
+	// pageScreenshot(driver, "screen9")
 
 	//exit
 	driver.KeyDown(selenium.EnterKey)
@@ -254,33 +310,4 @@ func main() {
 	time.Sleep(time.Duration(randDelay) * time.Millisecond)
 	driver.KeyUp(selenium.EnterKey)
 	fmt.Println("Успешно нажали на 'Выход'")
-
-	PageScreenshot(driver, "screen10")
-
-	time.Sleep(3 * time.Second)
-	PageScreenshot(driver, "screen11")
-
-	//clean up cookies
-	err = driver.DeleteAllCookies()
-	if err != nil {
-		log.Printf("Не удалось удалить все cookies: %v", err)
-	}
-}
-
-func PageScreenshot(driver selenium.WebDriver, fileName string) {
-	byteImg, err := driver.Screenshot()
-	if err != nil {
-		fmt.Println(err)
-	}
-	f, err := os.Create("./screenshots/" + fileName + ".png")
-	if err != nil {
-		fmt.Println(err)
-	}
-	f.Write(byteImg)
-	f.Close()
-}
-
-func cryptoRandom(min, max int) int {
-	n, _ := rand.Int(rand.Reader, big.NewInt(int64(max-min+1)))
-	return int(n.Int64()) + min
 }
