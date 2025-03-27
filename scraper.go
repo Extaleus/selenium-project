@@ -33,7 +33,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	service, err := selenium.NewChromeDriverService("./chromedriver", 4444)
+	service, err := selenium.NewChromeDriverService("./chromedriver", 8080)
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
