@@ -39,9 +39,6 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 	}
 	defer service.Stop()
 
-	userDataDir := "/opt/selpar/selenium-project/chrome-user-data"
-	profileName := "selenium"
-
 	caps := selenium.Capabilities{}
 	caps.AddChrome(chrome.Capabilities{
 		Path: "./chrome-linux64/chrome",
@@ -49,9 +46,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 			// "window-size=1920x1080",
 			// "--no-sandbox",
 			// "--disable-dev-shm-usage",
-			// "disable-gpu",
-			"--user-data-dir=" + userDataDir,
-			"--profile-directory=" + profileName,
+			"disable-gpu",
 			"--headless",
 		}})
 
