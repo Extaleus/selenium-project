@@ -40,13 +40,12 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 	}
 	defer service.Stop()
 
-	userDataDir, err := os.MkdirTemp("", "chrome-user-data")
+	err = os.Mkdir("chrome-user-data", 0777)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create temp dir"})
 		return
 	}
-	defer os.RemoveAll(userDataDir)
 
 	caps := selenium.Capabilities{}
 	caps.AddChrome(chrome.Capabilities{
@@ -56,7 +55,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 			// "--no-sandbox",
 			// "--disable-dev-shm-usage",
 			// "disable-gpu",
-			"--user-data-dir" + userDataDir,
+			"--user-data-dir=./chrome-user-data",
 			"--headless",
 		}})
 
