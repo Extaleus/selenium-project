@@ -13,10 +13,6 @@ import (
 	"github.com/tebeka/selenium/chrome"
 )
 
-type Product struct {
-	Name, Price string
-}
-
 type AuthRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -44,9 +40,15 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 	defer service.Stop()
 
 	caps := selenium.Capabilities{}
-	caps.AddChrome(chrome.Capabilities{Path: "./chrome-linux64/chrome", Args: []string{
-		"--headless",
-	}})
+	caps.AddChrome(chrome.Capabilities{
+		Path: "./chrome-linux64/chrome",
+		Args: []string{
+			// "window-size=1920x1080",
+			// "--no-sandbox",
+			// "--disable-dev-shm-usage",
+			// "disable-gpu",
+			"--headless",
+		}})
 
 	driver, err := selenium.NewRemote(caps, "")
 	if err != nil {
@@ -133,6 +135,7 @@ func main() {
 // 	}
 // 	f.Write(byteImg)
 // 	f.Close()
+// 	fmt.Printf("Screen save: %s", fileName)
 // }
 
 func authFlow(driver selenium.WebDriver, username, password string) {
@@ -141,12 +144,12 @@ func authFlow(driver selenium.WebDriver, username, password string) {
 		log.Fatal("Error:", err)
 	}
 
-	// driver.SetPageLoadTimeout(100 * time.Second)
+	driver.SetPageLoadTimeout(100 * time.Second)
 
 	// pageScreenshot(driver, "screen1")
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 	// pageScreenshot(driver, "screen2")
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	acceptAllCookies(driver)
 
@@ -160,7 +163,7 @@ func authFlow(driver selenium.WebDriver, username, password string) {
 
 	fillCredsAndLogin(driver, username, password)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	// pageScreenshot(driver, "screen7")
 
 	//get cookies
@@ -178,7 +181,11 @@ func acceptAllCookies(driver selenium.WebDriver) {
 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 		if err != nil {
-			panic(fmt.Errorf("не удалось найти кнопку 'Разрешить все cookie': %v", err))
+			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
+			if err != nil {
+				panic(fmt.Errorf("не удалось найти кнопку 'Разрешить все cookie': %v", err))
+			}
+			// elemCookieAccept = foundElem
 		}
 		elemCookieAccept = foundElem
 		visible, err := foundElem.IsDisplayed()
@@ -206,7 +213,11 @@ func continueWithInstagram(driver selenium.WebDriver) {
 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := wd.FindElement(selenium.ByXPATH, "//a[.//span[contains(text(), 'Продолжить с аккаунтом Instagram')]]")
 		if err != nil {
-			panic(fmt.Errorf("не удалось найти кнопку 'Продолжить с аккаунтом Instagram': %v", err))
+			foundElem, err = driver.FindElement(selenium.ByXPATH, "//a[.//span[contains(text(), 'Continue with Instagram')]]")
+			if err != nil {
+				panic(fmt.Errorf("не удалось найти кнопку 'Продолжить с аккаунтом Instagram': %v", err))
+			}
+			// elemContinueWithInstagram = foundElem
 		}
 		elemContinueWithInstagram = foundElem
 		visible, err := foundElem.IsDisplayed()
@@ -235,7 +246,11 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Имя пользователя, номер телефона или электронный адрес']")
 		if err != nil {
-			panic(fmt.Errorf("не удалось найти кнопку 'Имя пользователя, номер телефона или электронный адрес': %v", err))
+			foundElem, err = driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Username, phone or email']")
+			if err != nil {
+				panic(fmt.Errorf("не удалось найти кнопку 'Имя пользователя, номер телефона или электронный адрес': %v", err))
+			}
+			// elemUsername = foundElem
 		}
 		elemUsername = foundElem
 		visible, err := foundElem.IsDisplayed()
@@ -260,7 +275,11 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Пароль']")
 		if err != nil {
-			panic(fmt.Errorf("не удалось найти кнопку 'Пароль': %v", err))
+			foundElem, err = driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Password']")
+			if err != nil {
+				panic(fmt.Errorf("не удалось найти кнопку 'Пароль': %v", err))
+			}
+			// elemPassword = foundElem
 		}
 		elemPassword = foundElem
 		visible, err := foundElem.IsDisplayed()
@@ -285,7 +304,11 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Войти')]]")
 		if err != nil {
-			panic(fmt.Errorf("не удалось найти кнопку 'Войти': %v", err))
+			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Log in')]]")
+			if err != nil {
+				panic(fmt.Errorf("не удалось найти кнопку 'Войти': %v", err))
+			}
+			// elemSignInButton = foundElem
 		}
 		elemSignInButton = foundElem
 		visible, err := foundElem.IsDisplayed()
