@@ -33,7 +33,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	service, err := selenium.NewChromeDriverService("./chromedriver", 8080)
+	service, err := selenium.NewChromeDriverService("./chromedriver", 4444)
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
@@ -41,7 +41,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 
 	caps := selenium.Capabilities{}
 	caps.AddChrome(chrome.Capabilities{
-		Path: "./chrome-linux64/chrome",
+		// Path: "./chrome-linux64/chrome",
 		Args: []string{
 			// "window-size=1920x1080",
 			// "--no-sandbox",
