@@ -7,7 +7,6 @@ import (
 	"log"
 	"math/big"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/tebeka/selenium"
@@ -39,13 +38,6 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 		log.Fatal("Error:", err)
 	}
 	defer service.Stop()
-
-	err = os.Mkdir("chrome-user-data", 0777)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create temp dir"})
-		return
-	}
 
 	caps := selenium.Capabilities{}
 	caps.AddChrome(chrome.Capabilities{
