@@ -7,6 +7,8 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/tebeka/selenium"
@@ -33,6 +35,11 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Генерируем уникальный каталог для пользовательских данных
+	randNum, _ := rand.Int(rand.Reader, big.NewInt(1000000))
+	userDataDir := filepath.Join(os.TempDir(), fmt.Sprintf("chrome-data-%d", randNum))
+	defer os.RemoveAll(userDataDir) // Очищаем после использования
+
 	service, err := selenium.NewChromeDriverService("./chromedriver", 4444)
 	if err != nil {
 		log.Fatal("Error:", err)
@@ -44,11 +51,12 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 		Path: "./chrome-linux64/chrome",
 		Args: []string{
 			// "window-size=1920x1080",
-			// "--no-sandbox",
-			// "--disable-dev-shm-usage",
-			"--incognito",
+			"--no-sandbox",
+			"--disable-dev-shm-usage",
+			"--user-data-dir=" + userDataDir,
+			// "--incognito",
 			"disable-gpu",
-			"--headless",
+			"--headless=new",
 		}})
 
 	driver, err := selenium.NewRemote(caps, "")
