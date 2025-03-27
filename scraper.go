@@ -47,7 +47,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 			// "--no-sandbox",
 			// "--disable-dev-shm-usage",
 			// "disable-gpu",
-			"--user-data-dir=./chrome-user-data",
+			"--user-data-dir=/opt/selpar/selenium-project/chrome-user-data",
 			"--headless",
 		}})
 
