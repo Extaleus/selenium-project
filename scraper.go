@@ -46,6 +46,7 @@ func GetCookies(w http.ResponseWriter, req *http.Request) {
 			// "window-size=1920x1080",
 			// "--no-sandbox",
 			// "--disable-dev-shm-usage",
+			"--incognito",
 			"disable-gpu",
 			"--headless",
 		}})
