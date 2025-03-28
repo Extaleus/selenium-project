@@ -132,8 +132,8 @@ type Post struct {
 }
 
 type Result struct {
-	// MainPost Post   `json:"main_post"`
-	Answers []Post `json:"answers"`
+	MainPost Post   `json:"main_post"`
+	Answers  []Post `json:"answers"`
 }
 
 func ParsePostEntities(driver selenium.WebDriver) []byte {
@@ -384,12 +384,12 @@ func parseData(data []string) Result {
 	var result Result
 	var i int
 
-	// // Парсинг главного поста
-	// mainPostEnd := findMainPostEnd(data)
-	// if mainPostEnd > 0 {
-	// 	result.MainPost = parseMainPost(data[:mainPostEnd])
-	// 	i = mainPostEnd + 1
-	// }
+	// Парсинг главного поста
+	mainPostEnd := findMainPostEnd(data)
+	if mainPostEnd > 0 {
+		result.MainPost = parseMainPost(data[:mainPostEnd])
+		i = mainPostEnd + 1
+	}
 
 	// // Парсинг ответов
 	// for i < len(data) {
@@ -498,45 +498,45 @@ func parseData(data []string) Result {
 	return result
 }
 
-// func findMainPostEnd(data []string) int {
-// 	fmt.Printf("\n\n\n\ndata: %v\n\n\n\n\n\n", data)
+func findMainPostEnd(data []string) int {
+	fmt.Printf("\n\n\n\ndata: %v\n\n\n\n\n\n", data)
 
-// 	for i, s := range data {
-// 		// if strings.Contains(s, "Смотреть действия") {
-// 		if strings.HasSuffix(s, "Share") {
-// 			return i
-// 		}
-// 	}
-// 	return -1
-// }
+	for i, s := range data {
+		// if strings.Contains(s, "Смотреть действия") {
+		if strings.HasSuffix(s, "Share") {
+			return i
+		}
+	}
+	return -1
+}
 
-// func parseMainPost(postData []string) Post {
-// 	var post Post
+func parseMainPost(postData []string) Post {
+	var post Post
 
-// 	newPostData := []string{}
-// 	for _, row := range postData {
-// 		if row != "" {
-// 			newPostData = append(newPostData, row)
-// 		}
-// 	}
+	newPostData := []string{}
+	for _, row := range postData {
+		if row != "" {
+			newPostData = append(newPostData, row)
+		}
+	}
 
-// 	if len(newPostData) > 0 {
-// 		parts := strings.Fields(newPostData[0])
-// 		if len(parts) > 0 {
-// 			post.Username = parts[0]
-// 		}
-// 	}
+	if len(newPostData) > 0 {
+		parts := strings.Fields(newPostData[0])
+		if len(parts) > 0 {
+			post.Username = parts[0]
+		}
+	}
 
-// 	if len(newPostData) > 1 {
-// 		post.Description = strings.TrimSpace(newPostData[1])
-// 	}
+	if len(newPostData) > 1 {
+		post.Description = strings.TrimSpace(newPostData[1])
+	}
 
-// 	if len(newPostData) > 2 {
-// 		post.Likes = strings.TrimSpace(newPostData[2])
-// 	}
+	if len(newPostData) > 2 {
+		post.Likes = strings.TrimSpace(newPostData[2])
+	}
 
-// 	return post
-// }
+	return post
+}
 
 // Функция проверяет, является ли строка вероятными лайками (содержит цифры)
 func isLikelyLikes(s string) bool {

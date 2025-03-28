@@ -39,7 +39,12 @@ func main() {
 	caps := selenium.Capabilities{}
 	caps.AddChrome(chrome.Capabilities{
 		Path: "./chrome-linux64/chrome",
+		Prefs: map[string]interface{}{
+			"intl.accept_languages": "ru,ru-RU",
+		},
 		Args: []string{
+			"--lang=ru",
+			"--accept-lang=ru-RU",
 			"--no-sandbox",
 			"--disable-dev-shm-usage",
 			"--user-data-dir=" + userDataDir,

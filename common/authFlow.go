@@ -16,25 +16,43 @@ func AuthFlow(driver selenium.WebDriver, username, password string) {
 
 	driver.SetPageLoadTimeout(100 * time.Second)
 
-	// pageScreenshot(driver, "screen1")
-	time.Sleep(4 * time.Second)
-	// pageScreenshot(driver, "screen2")
-	time.Sleep(2 * time.Second)
+	//PageScreenshot(driver, "1")
+	time.Sleep(10 * time.Second)
+	//PageScreenshot(driver, "2")
+	time.Sleep(5 * time.Second)
 
 	acceptAllCookies(driver)
 
-	time.Sleep(2 * time.Second)
-	// pageScreenshot(driver, "screen3")
+	time.Sleep(5 * time.Second)
+	//PageScreenshot(driver, "5")
 
 	continueWithInstagram(driver)
 
-	time.Sleep(2 * time.Second)
-	// pageScreenshot(driver, "screen4")
+	time.Sleep(5 * time.Second)
+	//PageScreenshot(driver, "6")
+
+	foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	if err == nil {
+		fmt.Printf(foundElem.Text())
+		acceptAllCookies(driver)
+	}
+
+	time.Sleep(5 * time.Second)
+	//PageScreenshot(driver, "6")
 
 	fillCredsAndLogin(driver, username, password)
 
+	time.Sleep(5 * time.Second)
+	//PageScreenshot(driver, "6.1")
+
+	foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	if err == nil {
+		fmt.Printf(foundElem.Text())
+		acceptAllCookies(driver)
+	}
+
 	time.Sleep(10 * time.Second)
-	// pageScreenshot(driver, "screen7")
+	//PageScreenshot(driver, "10")
 
 	//get cookies
 	// getAllCookies(driver)
@@ -48,7 +66,8 @@ func acceptAllCookies(driver selenium.WebDriver) {
 		if err != nil {
 			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
 			if err != nil {
-				panic(fmt.Errorf("не удалось найти кнопку 'Разрешить все cookie': %v", err))
+				// return
+				fmt.Printf("не удалось найти кнопку 'Разрешить все cookie': %v", err)
 			}
 			// elemCookieAccept = foundElem
 		}
@@ -57,18 +76,27 @@ func acceptAllCookies(driver selenium.WebDriver) {
 		return visible, err
 	}, 10*time.Second)
 	if err != nil {
-		panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		fmt.Printf("не удалось найти элемент: %v", err)
 	}
 
+	time.Sleep(2 * time.Second)
+	//PageScreenshot(driver, "3")
 	//scroll to element
-	driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
 
-	//click
-	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
-	_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemCookieAccept})
-	if err != nil {
-		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err))
+	if err == nil {
+		driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
+
+		//click
+		time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+		_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemCookieAccept})
+		if err != nil {
+			fmt.Printf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err)
+		}
 	}
+
+	time.Sleep(2 * time.Second)
+	//PageScreenshot(driver, "4")
+
 	fmt.Println("Успешно нажали на 'Разрешить все cookie'")
 }
 
@@ -133,7 +161,7 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	}
 
 	time.Sleep(1 * time.Second)
-	// pageScreenshot(driver, "screen5")
+	//PageScreenshot(driver, "8")
 
 	//find with waiting
 	var elemPassword selenium.WebElement
@@ -162,7 +190,7 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	}
 
 	time.Sleep(1 * time.Second)
-	// pageScreenshot(driver, "screen6")
+	//PageScreenshot(driver, "9")
 
 	//find with waiting
 	var elemSignInButton selenium.WebElement

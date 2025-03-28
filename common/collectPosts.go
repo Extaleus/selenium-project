@@ -93,8 +93,8 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 
 	containedData := []string{}
 
-	// re := regexp.MustCompile(`<title>Нравится<\/title>[\s\S]*?<div[^>]*>\s*<span[^>]*>(\d+)<\/span>`)
-	re := regexp.MustCompile(`<title>Likes<\/title>[\s\S]*?<div[^>]*>\s*<span[^>]*>(\d+)<\/span>`)
+	re := regexp.MustCompile(`<title>Нравится<\/title>[\s\S]*?<div[^>]*>\s*<span[^>]*>(\d+)<\/span>`)
+	// re := regexp.MustCompile(`<title>Likes<\/title>[\s\S]*?<div[^>]*>\s*<span[^>]*>(\d+)<\/span>`)
 
 	for len(postsData) < 10 {
 		// Поиск всех постов
@@ -252,6 +252,8 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 						}
 					} else {
 						fmt.Println("Число не найдено")
+						// PageScreenshot(driver, "screen when number not find")
+						time.Sleep(1 * time.Second)
 					}
 				}
 			}
