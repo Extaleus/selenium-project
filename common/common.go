@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/tebeka/selenium"
 )
@@ -125,64 +126,164 @@ func PageScreenshot(driver selenium.WebDriver, fileName string) {
 // 	QuoteCount       *string
 // }
 
-func ParsePostEntities(driver selenium.WebDriver) {
+type Post struct {
+	Username    string `json:"username"`
+	Description string `json:"description"`
+	Likes       string `json:"likes"`
+}
+
+type Result struct {
+	MainPost Post   `json:"main_post"`
+	Answers  []Post `json:"answers"`
+}
+
+func ParsePostEntities(driver selenium.WebDriver) []string {
 	// fullHTML, err := driver.PageSource()
 	// if err != nil {
 	// 	log.Fatal("Не удалось получить HTML страницы:", err)
 	// }
 
-	titleElem, err := driver.FindElement(selenium.ByCSSSelector, "meta[property='og:title']")
+	// // 1. Переключаемся на контекст <head>
+	// headElem, err := driver.FindElement(selenium.ByTagName, "head")
+	// if err != nil {
+	// 	log.Fatal("Не удалось найти <head>:", err)
+	// }
+
+	// headHtml, err := headElem.GetAttribute("innerHTML")
+	// if err != nil {
+	// 	fmt.Printf("ошибка получения HTML элемента: %v", err)
+	// }
+
+	// fmt.Println(headHtml)
+
+	// Поиск всех постов
+
+	// parent, err := driver.FindElement(selenium.ByXPATH, "//div[@aria-label='Содержимое столбца']")
+	// if err != nil {
+	// 	log.Printf("Ошибка поиска постов1: %v", err)
+	// 	// continue
+	// }
+
+	// postEntity, err := driver.FindElements(selenium.ByXPATH, "(//div[@data-pressable-container='true'])[1]/*/*/*/div[1]")
+	// postEntity, err := driver.FindElements(selenium.ByXPATH, ".(//div[@data-pressable-container='true'])[1]/*/*/*/div[1]")
+	// postEntity, err := driver.FindElements(selenium.ByXPATH, "//div[@data-pressable-container='true']/*/*/*/div")
+	postEntity, err := driver.FindElements(selenium.ByXPATH, "//div[@data-pressable-container='true']/*/*/*/div")
 	if err != nil {
-		log.Fatal("Элемент не найден:", err)
+		log.Printf("Ошибка поиска постов2: %v", err)
+		// continue
 	}
 
-	// 2. Получаем атрибут 'content'
-	title, err := titleElem.GetAttribute("content")
-	if err != nil {
-		log.Fatal("Не удалось получить атрибут:", err)
-	}
-	title = strings.ReplaceAll(title, "auf Threads)", "")
-	fmt.Println("Значение атрибута content:", title)
+	var data []string
+	foundNonEmpty := false
 
-	descriptionElem, err := driver.FindElement(selenium.ByCSSSelector, "meta[property='og:description']")
-	if err != nil {
-		log.Fatal("Элемент не найден:", err)
-	}
-
-	// 2. Получаем атрибут 'content'
-	description, err := descriptionElem.GetAttribute("content")
-	if err != nil {
-		log.Fatal("Не удалось получить атрибут:", err)
-	}
-
-	fmt.Println("Значение атрибута content:", description)
-
-	scripts, err := driver.FindElements(selenium.ByCSSSelector, `script[type="application/json"]`)
-	if err != nil {
-		log.Fatal("Не удалось найти скрипты:", err)
-	}
-
-	// 2. Фильтруем скрипты, содержащие нужный паттерн
-	for _, script := range scripts {
-		content, err := script.GetAttribute("innerHTML")
+	for i, pe := range postEntity {
+		val, err := pe.Text()
 		if err != nil {
+			fmt.Printf("Ошибка получения текста для элемента %d: %v\n", i, err)
 			continue
 		}
 
-		// Удаляем лишние пробелы и переносы
-		content = strings.TrimSpace(content)
-
-		// Проверяем, начинается ли содержимое с требуемого JSON
-		if strings.Contains(content, `"require": [["ScheduledServe"`) {
-			fmt.Printf("Найден подходящий скрипт:\n%s\n", content)
-
-			// Дополнительно: парсим JSON
-			var data map[string]interface{}
-			if err := json.Unmarshal([]byte(content), &data); err == nil {
-				fmt.Println("Распарсенный require:", data["require"])
-			}
+		if val != "" || foundNonEmpty {
+			data = append(data, val)
+			foundNonEmpty = true
 		}
 	}
+
+	result := parseData(data)
+	jsonData, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+	}
+
+	fmt.Println(string(jsonData))
+
+	return data
+
+	// for i, pe := range postEntity {
+	// 	val, err := pe.Text()
+	// 	if err != nil {
+	// 		fmt.Printf("postEntityChild1: HEUTA")
+	// 	}
+	// 	if val != "" {
+	// 		fmt.Printf("postEntityChild %d: %v\n", i, val)
+	// 		fmt.Println()
+	// 	}
+	// }
+
+	// postEntityChild1
+	// if err != nil {
+	// 	log.Printf("Ошибка поиска постов: %v", err)
+	// 	// continue
+	// }
+	// fmt.Printf("postEntityChild1: %v\n", postEntityChild1)
+
+	// postEntity[0]
+
+	// // 2. Ищем meta[og:title] именно в <head>
+	// titleElems, err := headElem.FindElements(selenium.ByCSSSelector, "meta[property='og:title']")
+	// if err != nil {
+	// 	log.Fatal("Meta og:title не найден:", err)
+	// }
+
+	// // 3. Обрабатываем результаты
+	// for _, metaTag := range titleElems {
+	// 	title, err := metaTag.GetAttribute("content")
+	// 	if err != nil {
+	// 		log.Println("Не удалось получить content:", err)
+	// 		continue
+	// 	}
+
+	// 	// title = strings.ReplaceAll(title, "auf Threads)", "")
+	// 	fmt.Println("og:title:", strings.TrimSpace(title))
+	// }
+
+	// // 2. Получаем атрибут 'content'
+	// title, err := titleElem.GetAttribute("content")
+	// if err != nil {
+	// 	log.Fatal("Не удалось получить атрибут:", err)
+	// }
+	// title = strings.ReplaceAll(title, "auf Threads)", "")
+	// fmt.Println("Значение атрибута content:", title)
+
+	// descriptionElem, err := headElem.FindElement(selenium.ByCSSSelector, "meta[property='og:description']")
+	// if err != nil {
+	// 	log.Fatal("Элемент не найден:", err)
+	// }
+
+	// // 2. Получаем атрибут 'content'
+	// description, err := descriptionElem.GetAttribute("content")
+	// if err != nil {
+	// 	log.Fatal("Не удалось получить атрибут:", err)
+	// }
+
+	// fmt.Println("Значение атрибута content:", description)
+
+	// scripts, err := driver.FindElements(selenium.ByCSSSelector, `script[type="application/json"]`)
+	// if err != nil {
+	// 	log.Fatal("Не удалось найти скрипты:", err)
+	// }
+
+	// // 2. Фильтруем скрипты, содержащие нужный паттерн
+	// for _, script := range scripts {
+	// 	content, err := script.GetAttribute("innerHTML")
+	// 	if err != nil {
+	// 		continue
+	// 	}
+
+	// 	// Удаляем лишние пробелы и переносы
+	// 	content = strings.TrimSpace(content)
+
+	// 	// Проверяем, начинается ли содержимое с требуемого JSON
+	// 	if strings.Contains(content, `"require": [["ScheduledServe"`) {
+	// 		fmt.Printf("Найден подходящий скрипт:\n%s\n", content)
+
+	// 		// Дополнительно: парсим JSON
+	// 		var data map[string]interface{}
+	// 		if err := json.Unmarshal([]byte(content), &data); err == nil {
+	// 			fmt.Println("Распарсенный require:", data["require"])
+	// 		}
+	// 	}
+	// }
 
 	// targetElement, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf("//span[text()='%s']/ancestor::*[5]", postText))
 	// if err != nil {
@@ -278,4 +379,182 @@ func ParsePostEntities(driver selenium.WebDriver) {
 	// 		fmt.Println(postEntriesArr)
 	// 	}
 	// }
+}
+
+func parseData(data []string) Result {
+	var result Result
+	var i int
+
+	// Парсинг главного поста
+	mainPostEnd := findMainPostEnd(data)
+	if mainPostEnd > 0 {
+		result.MainPost = parseMainPost(data[:mainPostEnd])
+		i = mainPostEnd + 1
+	}
+
+	// // Парсинг ответов
+	// for i < len(data) {
+	// 	// Пропускаем пустые строки
+	// 	if data[i] == "" {
+	// 		i++
+	// 		continue
+	// 	}
+
+	// 	// Находим начало поста (username)
+	// 	username := data[i]
+	// 	i++
+
+	// 	// Пропускаем пустые строки между username и description
+	// 	for i < len(data) && data[i] == "" {
+	// 		i++
+	// 	}
+
+	// 	// Получаем description
+	// 	var description string
+	// 	if i < len(data) {
+	// 		description = data[i]
+	// 		i++
+	// 	}
+
+	// 	// Пропускаем пустые строки между description и likes
+	// 	for i < len(data) && data[i] == "" {
+	// 		i++
+	// 	}
+
+	// 	// Получаем likes
+	// 	var likes string
+	// 	if i < len(data) && !strings.Contains(data[i], "Смотреть действия") {
+	// 		likes = data[i]
+	// 		i++
+	// 	}
+
+	// 	// Создаем пост только если есть все необходимые данные
+	// 	if username != "" && description != "" {
+	// 		post := Post{
+	// 			Username:    strings.Fields(username)[0], // Берем только первую часть (без времени)
+	// 			Description: strings.TrimSpace(description),
+	// 			Likes:       strings.TrimSpace(likes),
+	// 		}
+	// 		result.Answers = append(result.Answers, post)
+	// 	}
+
+	// 	// Пропускаем пустые строки между постами
+	// 	for i < len(data) && data[i] == "" {
+	// 		i++
+	// 	}
+	// }
+
+	// Парсинг ответов
+	for i < len(data) {
+		// Пропускаем пустые строки
+		if data[i] == "" {
+			i++
+			continue
+		}
+
+		// 1. Получаем username (первая непустая строка)
+		username := strings.Fields(data[i])[0]
+		i++
+
+		// Пропускаем пустые строки
+		for i < len(data) && data[i] == "" {
+			i++
+		}
+
+		// 2. Получаем description (следующая непустая строка)
+		if i >= len(data) {
+			break
+		}
+		description := data[i]
+		i++
+
+		// Пропускаем пустые строки
+		for i < len(data) && data[i] == "" {
+			i++
+		}
+
+		// 3. Проверяем, есть ли likes (должны быть цифры или \n)
+		var likes string
+		if i < len(data) && isLikelyLikes(data[i]) {
+			likes = data[i]
+			i++
+		} else {
+			likes = "0" // Если лайков нет, ставим 0
+		}
+
+		// Добавляем пост
+		post := Post{
+			Username:    username,
+			Description: strings.TrimSpace(description),
+			Likes:       strings.TrimSpace(likes),
+		}
+		result.Answers = append(result.Answers, post)
+
+		// Пропускаем пустые строки между постами
+		for i < len(data) && data[i] == "" {
+			i++
+		}
+	}
+
+	return result
+}
+
+func findMainPostEnd(data []string) int {
+	for i, s := range data {
+		if strings.Contains(s, "Смотреть действия") {
+			return i
+		}
+	}
+	return -1
+}
+
+func parseMainPost(postData []string) Post {
+	var post Post
+
+	newPostData := []string{}
+	for _, row := range postData {
+		if row != "" {
+			newPostData = append(newPostData, row)
+		}
+	}
+
+	if len(newPostData) > 0 {
+		parts := strings.Fields(newPostData[0])
+		if len(parts) > 0 {
+			post.Username = parts[0]
+		}
+	}
+
+	if len(newPostData) > 1 {
+		post.Description = strings.TrimSpace(newPostData[1])
+	}
+
+	if len(newPostData) > 2 {
+		post.Likes = strings.TrimSpace(newPostData[2])
+	}
+
+	return post
+}
+
+// Функция проверяет, является ли строка вероятными лайками (содержит цифры)
+func isLikelyLikes(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	// Проверяем, содержит ли строка хотя бы одну цифру
+	hasDigit := false
+	for _, r := range s {
+		if unicode.IsDigit(r) {
+			hasDigit = true
+		}
+		if r == '\n' {
+			continue // переносы строки допускаем
+		}
+		if !unicode.IsDigit(r) && r != '\n' {
+			return false // если есть не-цифра и не перенос строки
+		}
+	}
+
+	return hasDigit
 }

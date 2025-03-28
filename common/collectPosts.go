@@ -183,21 +183,22 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
 					//
 					//
 
-					// targetElement, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf("//span[text()='%s']/ancestor::*[5]", postTextArr[2]))
-					// if err != nil {
-					// 	log.Fatal("Не удалось найти элемент:", err)
-					// }
+					targetElement, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf("//span[text()='%s']/ancestor::*[5]", postTextArr[2]))
+					if err != nil {
+						log.Printf("не удалось найти элемент: %s", err)
+						continue
+					}
 
-					// time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
-					// _, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
-					// if err != nil {
-					// 	panic(fmt.Errorf("не удалось кликнуть по кнопке 'Копировать ссылку': %v", err))
-					// }
+					time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
+					_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
+					if err != nil {
+						panic(fmt.Errorf("dfas': %v", err))
+					}
 
-					// time.Sleep(1 * time.Second)
-					// PageScreenshot(driver, "clicked")
+					time.Sleep(1 * time.Second)
+					PageScreenshot(driver, "clicked")
 
-					// time.Sleep(10 * time.Second)
+					time.Sleep(10 * time.Second)
 
 					// // Поиск всех постов (обновите селектор)
 					// postEntries, err := driver.FindElements(selenium.ByCSSSelector, "div[data-pressable-container=\"true\"]")
@@ -224,7 +225,15 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
 					ParsePostEntities(driver)
 
 					time.Sleep(1 * time.Second)
-					PageScreenshot(driver, "fuckme")
+					PageScreenshot(driver, "after post parsing")
+
+					script := "window.scrollTo(0, document.body.scrollHeight);"
+					if _, err := driver.ExecuteScript(script, nil); err != nil {
+						log.Printf("Ошибка прокрутки: %v", err)
+					}
+
+					time.Sleep(1 * time.Second)
+					PageScreenshot(driver, "after scroll post parsing")
 
 					break
 				}
