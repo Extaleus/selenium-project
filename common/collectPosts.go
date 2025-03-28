@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -11,16 +12,8 @@ import (
 	"github.com/tebeka/selenium"
 )
 
-// type Post struct {
-// 	Likes     int    `json:"likes"`
-// 	Text      string `json:"text,omitempty"`
-// 	Author    string `json:"author,omitempty"`
-// 	Timestamp string `json:"timestamp,omitempty"`
-// 	// Добавьте другие поля по необходимости
-// }
-
-func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
-	PageScreenshot(driver, "screen1")
+func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
+	// PageScreenshot(driver, "screen1")
 
 	err := driver.Get("https://www.threads.net/for_you")
 	if err != nil {
@@ -28,12 +21,12 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
 	}
 
 	time.Sleep(10 * time.Second)
-	PageScreenshot(driver, "screen2")
+	// PageScreenshot(driver, "screen2")
 
 	// time.Sleep(4 * time.Second)
 	// PageScreenshot(driver, "screen2")
 
-	// // driver.SetPageLoadTimeout(100 * time.Second)
+	driver.SetPageLoadTimeout(100 * time.Second)
 
 	// // pageScreenshot(driver, "screen1")
 	// // time.Sleep(4 * time.Second)
@@ -55,11 +48,9 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
 	// //get cookies
 	// // getAllCookies(driver)
 
-	// // var postsData []Post
 	// // lastHeight := 0
 	// // newHeight := 0
 
-	// // for len(postsData) < 10 {
 	// // Прокрутка страницы вниз
 	// PageScreenshot(driver, "screen3")
 
@@ -98,149 +89,180 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
 	// break // Если прокрутка больше не работает
 	// }
 	// lastHeight = int(newHeight)
+	postsData := []Result{}
 
-	// Поиск всех постов
-	posts, err := driver.FindElements(selenium.ByCSSSelector, "div[data-pressable-container=\"true\"]")
-	if err != nil {
-		log.Printf("Ошибка поиска постов: %v", err)
-		// continue
-	}
+	containedData := []string{}
 
 	re := regexp.MustCompile(`<title>Нравится<\/title>[\s\S]*?<div[^>]*>\s*<span[^>]*>(\d+)<\/span>`)
 
-	fmt.Println(len(posts))
-	for j := range posts {
-		postText, err := posts[j].Text()
-		if err == nil {
-			html, err := posts[j].GetAttribute("outerHTML")
-			if err != nil {
-				fmt.Printf("ошибка получения HTML элемента: %v", err)
-			}
+	for len(postsData) < 10 {
+		// Поиск всех постов
+		posts, err := driver.FindElements(selenium.ByCSSSelector, "div[data-pressable-container=\"true\"]")
+		if err != nil {
+			log.Printf("Ошибка поиска постов: %v", err)
+			// continue
+		}
 
-			if strings.Contains(html, "<img class") {
-				continue
-			}
-
-			postTextArr := strings.Split(postText, "\n")
-			fmt.Printf("\npost array length: %d", len(postTextArr))
-			fmt.Println("\npost array:")
-			for i := range postTextArr {
-				fmt.Printf("\t%s\n", postTextArr[i])
-			}
-			fmt.Println("\tfull post:")
-			fmt.Printf("postTextArr: %v\n", postTextArr)
-
-			// html, err := posts[j].GetAttribute("outerHTML")
-			// if err != nil {
-			// 	fmt.Printf("ошибка получения HTML элемента: %v", err)
-			// }
-
-			// Ищем совпадения
-			matches := re.FindStringSubmatch(html)
-			if len(matches) > 1 {
-				fmt.Println("Найдено число:", matches[1])
-				likesNumber, err := strconv.Atoi(matches[1])
+		fmt.Println(len(posts))
+		for j := range posts {
+			postText, err := posts[j].Text()
+			if err == nil {
+				html, err := posts[j].GetAttribute("innerHTML")
 				if err != nil {
-					likesNumber = 0
+					fmt.Printf("ошибка получения HTML элемента: %v", err)
 				}
-				if likesNumber > likesNeeded {
-					// FindMoreButton(driver, postTextArr[2])
 
-					time.Sleep(1 * time.Second)
-					PageScreenshot(driver, "hello")
+				if !strings.Contains(html, "<img class") {
+					postTextArr := strings.Split(postText, "\n")
+					fmt.Printf("\npost array length: %d", len(postTextArr))
+					fmt.Println("\npost array:")
+					for i := range postTextArr {
+						fmt.Printf("\t%s\n", postTextArr[i])
+					}
+					fmt.Println("\tfull post:")
+					fmt.Printf("postTextArr: %v\n", postTextArr)
 
-					// targetElement, err := driver.FindElement(selenium.ByXPATH, "//span[text()='Копировать ссылку']/ancestor::*[2]")
+					// html, err := posts[j].GetAttribute("outerHTML")
 					// if err != nil {
-					// 	log.Fatal("Не удалось найти элемент:", err)
+					// 	fmt.Printf("ошибка получения HTML элемента: %v", err)
 					// }
 
-					// time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
-					// _, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
-					// if err != nil {
-					// 	panic(fmt.Errorf("не удалось кликнуть по кнопке 'Копировать ссылку': %v", err))
-					// }
-					// fmt.Println("Успешно нажали на 'Копировать ссылку'")
-					// time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
-					// PageScreenshot(driver, "clicked")
-
-					// // Команда для получения текста из буфера
-					// cmd := exec.Command("xclip", "-o", "-selection", "clipboard")
-
-					// // Запускаем и получаем вывод
-					// output, err := cmd.Output()
-					// if err != nil {
-					// 	fmt.Println("Ошибка:", err)
-					// 	return
-					// }
-
-					// // Выводим текст
-					// fmt.Println("Текст из буфера:")
-					// fmt.Println(string(output))
-
-					//
-					//
-					//
-					//
-					//
-
-					targetElement, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf("//span[text()='%s']/ancestor::*[5]", postTextArr[2]))
-					if err != nil {
-						log.Printf("не удалось найти элемент: %s", err)
-						continue
+					for _, contData := range containedData {
+						if contData == postTextArr[2] {
+							continue
+						} else {
+							containedData = append(containedData, postTextArr[2])
+						}
 					}
 
-					time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
-					_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
-					if err != nil {
-						panic(fmt.Errorf("dfas': %v", err))
+					// Ищем совпадения
+					matches := re.FindStringSubmatch(html)
+					if len(matches) > 1 {
+						fmt.Println("Найдено число:", matches[1])
+						likesNumber, err := strconv.Atoi(matches[1])
+						if err != nil {
+							likesNumber = 0
+						}
+						if likesNumber > likesNeeded {
+							// FindMoreButton(driver, postTextArr[2])
+
+							time.Sleep(1 * time.Second)
+							// PageScreenshot(driver, "hello")
+
+							// targetElement, err := driver.FindElement(selenium.ByXPATH, "//span[text()='Копировать ссылку']/ancestor::*[2]")
+							// if err != nil {
+							// 	log.Fatal("Не удалось найти элемент:", err)
+							// }
+
+							// time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
+							// _, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
+							// if err != nil {
+							// 	panic(fmt.Errorf("не удалось кликнуть по кнопке 'Копировать ссылку': %v", err))
+							// }
+							// fmt.Println("Успешно нажали на 'Копировать ссылку'")
+							// time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
+							// PageScreenshot(driver, "clicked")
+
+							// // Команда для получения текста из буфера
+							// cmd := exec.Command("xclip", "-o", "-selection", "clipboard")
+
+							// // Запускаем и получаем вывод
+							// output, err := cmd.Output()
+							// if err != nil {
+							// 	fmt.Println("Ошибка:", err)
+							// 	return
+							// }
+
+							// // Выводим текст
+							// fmt.Println("Текст из буфера:")
+							// fmt.Println(string(output))
+
+							//
+							//
+							//
+							//
+							//
+
+							targetElement, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf("//span[text()='%s']/ancestor::*[5]", postTextArr[2]))
+							if err != nil {
+								log.Printf("не удалось найти элемент: %s", err)
+								continue
+							}
+
+							driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{targetElement})
+
+							time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
+							_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
+							if err != nil {
+								panic(fmt.Errorf("dfas': %v", err))
+							}
+
+							time.Sleep(1 * time.Second)
+							// PageScreenshot(driver, "clicked")
+
+							time.Sleep(10 * time.Second)
+
+							// // Поиск всех постов (обновите селектор)
+							// postEntries, err := driver.FindElements(selenium.ByCSSSelector, "div[data-pressable-container=\"true\"]")
+							// if err != nil {
+							// 	log.Printf("Ошибка поиска постов: %v", err)
+							// 	// continue
+							// }
+
+							// fmt.Println(len(postEntries))
+							// for j := range postEntries {
+							// 	postEntity, err := postEntries[j].Text()
+							// 	if err == nil {
+							// 		postEntityTextArr := strings.Split(postEntity, "\n")
+							// 		fmt.Printf("\npost entity array length: %d", len(postEntityTextArr))
+							// 		fmt.Println("\npost entity array:")
+							// 		for i := range postEntityTextArr {
+							// 			fmt.Printf("\t%s\n", postEntityTextArr[i])
+							// 		}
+							// 		fmt.Println("\tfull entity post:")
+							// 		fmt.Printf("postEntityTextArr: %v\n", postEntityTextArr)
+							// 	}
+							// }
+
+							parsedPost := ParsePostEntities(driver)
+							result := Result{}
+							err = json.Unmarshal([]byte(parsedPost), &result)
+							if err != nil {
+								log.Fatal("Ошибка при распарсивании JSON:", err)
+							}
+							postsData = append(postsData, result)
+
+							time.Sleep(1 * time.Second)
+							// PageScreenshot(driver, "after post parsing")
+
+							script := "window.scrollTo(0, document.body.scrollHeight);"
+							if _, err := driver.ExecuteScript(script, nil); err != nil {
+								log.Printf("Ошибка прокрутки: %v", err)
+							}
+
+							time.Sleep(1 * time.Second)
+							// PageScreenshot(driver, "after scroll post parsing")
+							// break
+
+							driver.Back()
+
+							time.Sleep(1 * time.Second)
+							// PageScreenshot(driver, "after back")
+						}
+					} else {
+						fmt.Println("Число не найдено")
 					}
-
-					time.Sleep(1 * time.Second)
-					PageScreenshot(driver, "clicked")
-
-					time.Sleep(10 * time.Second)
-
-					// // Поиск всех постов (обновите селектор)
-					// postEntries, err := driver.FindElements(selenium.ByCSSSelector, "div[data-pressable-container=\"true\"]")
-					// if err != nil {
-					// 	log.Printf("Ошибка поиска постов: %v", err)
-					// 	// continue
-					// }
-
-					// fmt.Println(len(postEntries))
-					// for j := range postEntries {
-					// 	postEntity, err := postEntries[j].Text()
-					// 	if err == nil {
-					// 		postEntityTextArr := strings.Split(postEntity, "\n")
-					// 		fmt.Printf("\npost entity array length: %d", len(postEntityTextArr))
-					// 		fmt.Println("\npost entity array:")
-					// 		for i := range postEntityTextArr {
-					// 			fmt.Printf("\t%s\n", postEntityTextArr[i])
-					// 		}
-					// 		fmt.Println("\tfull entity post:")
-					// 		fmt.Printf("postEntityTextArr: %v\n", postEntityTextArr)
-					// 	}
-					// }
-
-					ParsePostEntities(driver)
-
-					time.Sleep(1 * time.Second)
-					PageScreenshot(driver, "after post parsing")
-
-					script := "window.scrollTo(0, document.body.scrollHeight);"
-					if _, err := driver.ExecuteScript(script, nil); err != nil {
-						log.Printf("Ошибка прокрутки: %v", err)
-					}
-
-					time.Sleep(1 * time.Second)
-					PageScreenshot(driver, "after scroll post parsing")
-
-					break
 				}
-			} else {
-				fmt.Println("Число не найдено")
 			}
 		}
+		// можно листать к последнему элементу из posts
+		script := "window.scrollTo(0, document.body.scrollHeight);"
+		if _, err := driver.ExecuteScript(script, nil); err != nil {
+			log.Printf("Ошибка прокрутки: %v", err)
+		}
+
+		time.Sleep(5 * time.Second)
+		// PageScreenshot(driver, "after scroll")
 	}
 
 	// postText0, err := posts[0].Text()
@@ -320,6 +342,8 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) {
 	// if err := os.WriteFile("top_posts.json", jsonData, 0644); err != nil {
 	//     log.Fatalf("Ошибка записи в файл: %v", err)
 	// }
+
+	return postsData
 }
 
 // func getLikesCount(post selenium.WebElement) (int, error) {

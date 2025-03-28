@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"os"
 	"strings"
 	"unicode"
 
@@ -18,19 +17,19 @@ func CryptoRandom(min, max int) int {
 	return int(n.Int64()) + min
 }
 
-func PageScreenshot(driver selenium.WebDriver, fileName string) {
-	byteImg, err := driver.Screenshot()
-	if err != nil {
-		fmt.Println(err)
-	}
-	f, err := os.Create("./screenshots/" + fileName + ".png")
-	if err != nil {
-		fmt.Println(err)
-	}
-	f.Write(byteImg)
-	f.Close()
-	fmt.Printf("Screen save: %s\n", fileName)
-}
+// func PageScreenshot(driver selenium.WebDriver, fileName string) {
+// 	byteImg, err := driver.Screenshot()
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	f, err := os.Create("./screenshots/" + fileName + ".png")
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	f.Write(byteImg)
+// 	f.Close()
+// 	fmt.Printf("Screen save: %s\n", fileName)
+// }
 
 // func SaveElementHTML(element selenium.WebElement, filename string) error {
 // 	html, err := element.GetAttribute("outerHTML")
@@ -137,7 +136,7 @@ type Result struct {
 	Answers  []Post `json:"answers"`
 }
 
-func ParsePostEntities(driver selenium.WebDriver) []string {
+func ParsePostEntities(driver selenium.WebDriver) []byte {
 	// fullHTML, err := driver.PageSource()
 	// if err != nil {
 	// 	log.Fatal("Не удалось получить HTML страницы:", err)
@@ -197,7 +196,7 @@ func ParsePostEntities(driver selenium.WebDriver) []string {
 
 	fmt.Println(string(jsonData))
 
-	return data
+	return jsonData
 
 	// for i, pe := range postEntity {
 	// 	val, err := pe.Text()

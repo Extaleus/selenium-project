@@ -119,12 +119,10 @@ func GetPosts(w http.ResponseWriter, req *http.Request, driver selenium.WebDrive
 		return
 	}
 
-	common.CollectPosts(driver, input.LikesNeeded)
+	results := common.CollectPosts(driver, input.LikesNeeded)
 
 	w.WriteHeader(http.StatusOK)
-	// json.NewEncoder(w).Encode(map[string]interface{}{
-	// 	"cookies": allCookies,
-	// })
+	json.NewEncoder(w).Encode(results)
 }
 
 //
