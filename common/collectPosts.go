@@ -277,6 +277,8 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 
 		time.Sleep(5 * time.Second)
 		PageScreenshot(driver, "after scroll")
+
+		break
 	}
 
 	// postText0, err := posts[0].Text()
