@@ -76,7 +76,7 @@ func main() {
 	CleanUpAllCookies(driver)
 
 	// Маршруты
-	r.GET("/getcookies", func(c *gin.Context) {
+	r.POST("/getcookies", func(c *gin.Context) {
 		GetCookies(c, driver)
 	})
 
