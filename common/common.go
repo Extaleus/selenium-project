@@ -137,6 +137,20 @@ type Result struct {
 	Answers  []Post `json:"answers"`
 }
 
+type ResultOnePost struct {
+	PostEntities []Post `json:"answers"`
+}
+
+func WaitForPageLoad(driver selenium.WebDriver) error {
+	return driver.Wait(func(wd selenium.WebDriver) (bool, error) {
+		readyState, err := wd.ExecuteScript("return document.readyState", nil)
+		if err != nil {
+			return false, err
+		}
+		return readyState == "complete", nil
+	})
+}
+
 func ParsePostEntities(driver selenium.WebDriver) []byte {
 	// fullHTML, err := driver.PageSource()
 	// if err != nil {

@@ -24,6 +24,10 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
+type PostByLinkRequest struct {
+	Link string `json:"link"`
+}
+
 type LikesCountRequest struct {
 	LikesNeeded int    `json:"likesneeded"`
 	CallbackURL string `json:"callback_url"`
@@ -75,6 +79,11 @@ func main() {
 	// Маршруты
 	r.POST("/getcookies", func(c *gin.Context) {
 		GetCookies(c, driver)
+	})
+
+	// Маршруты
+	r.POST("/getpostbylink", func(c *gin.Context) {
+		GetPostByLink(c, driver)
 	})
 
 	// r.GET("/getposts", func(c *gin.Context) {
@@ -135,6 +144,52 @@ func GetCookies(c *gin.Context, driver selenium.WebDriver) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"cookies": allCookies})
+}
+
+func GetPostByLink(c *gin.Context, driver selenium.WebDriver) {
+	// Проверяем метод запроса
+	if c.Request.Method != "POST" {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
+		return
+	}
+
+	// Парсим тело запроса
+	var creds PostByLinkRequest
+	if err := c.ShouldBindJSON(&creds); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
+	}
+
+	err := driver.Get(creds.Link)
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
+
+	driver.SetPageLoadTimeout(100 * time.Second)
+
+	common.PageScreenshot(driver, "post screen 1")
+
+	time.Sleep(10 * time.Second)
+
+	err = common.WaitForPageLoad(driver)
+	if err != nil {
+		log.Fatal("Page load error:", err)
+	}
+
+	parsedPost := common.ParsePostEntities(driver)
+	result := common.ResultOnePost{}
+	err = json.Unmarshal([]byte(parsedPost), &result)
+	if err != nil {
+		log.Fatal("Ошибка при распарсивании JSON:", err)
+	}
+
+	// time.Sleep(2 * time.Second)
+
+	common.PageScreenshot(driver, "post screen 2")
+
+	// common.AuthFlow(driver, creds.Username, creds.Password)
+
+	c.JSON(http.StatusOK, gin.H{"cookies": result})
 }
 
 func sendCallback(url string, data interface{}) {
