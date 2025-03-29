@@ -1,16 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sync"
+	"time"
 
 	"github.com/Extaleus/selenium-project/common"
 	"github.com/gin-gonic/gin"
@@ -24,13 +24,9 @@ type AuthRequest struct {
 }
 
 type LikesCountRequest struct {
-	LikesNeeded int `json:"likesneeded"`
+	LikesNeeded int    `json:"likesneeded"`
+	CallbackURL string `json:"callback_url"`
 }
-
-var (
-	sseClients   = make(map[string]chan string) // taskID -> канал
-	sseClientsMu sync.Mutex
-)
 
 func main() {
 	r := gin.Default()
@@ -84,7 +80,6 @@ func main() {
 	// 	GetPosts(c, driver)
 	// })
 
-	// Измененный GET /getposts с SSE
 	r.POST("/getposts", func(c *gin.Context) {
 		var input LikesCountRequest
 		if err := c.ShouldBindJSON(&input); err != nil {
@@ -92,59 +87,22 @@ func main() {
 			return
 		}
 
-		taskID := fmt.Sprintf("task_%d", randNum.Int64())
-
-		// Создаем канал для SSE
-		sseClientsMu.Lock()
-		sseClients[taskID] = make(chan string)
-		sseClientsMu.Unlock()
+		// Валидация callback URL
+		if input.CallbackURL == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "callback_url is required"})
+			return
+		}
 
 		// Запускаем сбор постов в фоне
 		go func() {
 			results := common.CollectPosts(driver, input.LikesNeeded)
-			jsonData, _ := json.Marshal(results)
-
-			sseClientsMu.Lock()
-			if ch, exists := sseClients[taskID]; exists {
-				ch <- string(jsonData)
-				close(ch)
-			}
-			sseClientsMu.Unlock()
+			sendCallback(input.CallbackURL, results)
 		}()
 
-		c.JSON(http.StatusOK, gin.H{"task_id": taskID})
-	})
-
-	// SSE эндпоинт для n8n
-	r.GET("/sse/:taskID", func(c *gin.Context) {
-		taskID := c.Param("taskID")
-
-		sseClientsMu.Lock()
-		eventChan, exists := sseClients[taskID]
-		sseClientsMu.Unlock()
-
-		if !exists {
-			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
-			return
-		}
-
-		c.Stream(func(w io.Writer) bool {
-			select {
-			case msg, ok := <-eventChan:
-				if !ok {
-					return false
-				}
-				c.SSEvent("message", msg)
-				return false // Закрываем соединение после отправки
-			case <-c.Writer.CloseNotify():
-				return false
-			}
+		c.JSON(http.StatusAccepted, gin.H{
+			"status":  "processing",
+			"message": "Request accepted. Results will be sent to the callback URL",
 		})
-
-		// Очистка
-		sseClientsMu.Lock()
-		delete(sseClients, taskID)
-		sseClientsMu.Unlock()
 	})
 
 	// Запуск сервера
@@ -176,6 +134,53 @@ func GetCookies(c *gin.Context, driver selenium.WebDriver) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"cookies": allCookies})
+}
+
+// Улучшенная функция отправки callback
+func sendCallback(url string, data interface{}) {
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Failed to marshal callback data: %v", err)
+		return
+	}
+
+	// Добавляем логирование для отладки
+	log.Printf("Sending callback to: %s", url)
+	log.Printf("Payload: %s", string(jsonData))
+
+	// Пытаемся отправить несколько раз в случае ошибки
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Printf("Failed to create request (attempt %d): %v", i+1, err)
+			continue
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", "Selenium-Webhook-Service")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("Callback attempt %d failed: %v", i+1, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			log.Printf("Callback successfully delivered")
+			resp.Body.Close()
+			return
+		}
+
+		log.Printf("Callback attempt %d failed with status: %d", i+1, resp.StatusCode)
+		resp.Body.Close()
+		time.Sleep(2 * time.Second)
+	}
+
+	log.Printf("Failed to send callback after %d attempts", maxRetries)
 }
 
 // func GetPosts(c *gin.Context, driver selenium.WebDriver) {
