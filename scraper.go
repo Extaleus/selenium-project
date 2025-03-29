@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	"net/http"
@@ -136,51 +137,55 @@ func GetCookies(c *gin.Context, driver selenium.WebDriver) {
 	c.JSON(http.StatusOK, gin.H{"cookies": allCookies})
 }
 
-// Улучшенная функция отправки callback
 func sendCallback(url string, data interface{}) {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second} // Увеличиваем таймаут
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		log.Printf("Failed to marshal callback data: %v", err)
+		log.Printf("JSON Marshal error: %v", err)
 		return
 	}
 
-	// Добавляем логирование для отладки
 	log.Printf("Sending callback to: %s", url)
 	log.Printf("Payload: %s", string(jsonData))
 
-	// Пытаемся отправить несколько раз в случае ошибки
-	maxRetries := 3
-	for i := 0; i < maxRetries; i++ {
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-		if err != nil {
-			log.Printf("Failed to create request (attempt %d): %v", i+1, err)
-			continue
-		}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Request creation failed: %v", err)
+		return
+	}
 
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", "Selenium-Webhook-Service")
+	// Добавляем необходимые заголовки
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("n8n-test", "true") // Специальный заголовок для n8n test webhook
 
+	// Добавляем базовую аутентификацию если требуется
+	// req.SetBasicAuth("username", "password")
+
+	for i := 1; i <= 3; i++ {
+		log.Printf("Attempt %d...", i)
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Printf("Callback attempt %d failed: %v", i+1, err)
+			log.Printf("Attempt %d failed: %v", i, err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			log.Printf("Callback successfully delivered")
-			resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		log.Printf("Response status: %d", resp.StatusCode)
+		log.Printf("Response body: %s", string(body))
+
+		if resp.StatusCode == http.StatusOK {
+			log.Printf("Callback delivered successfully")
 			return
 		}
 
-		log.Printf("Callback attempt %d failed with status: %d", i+1, resp.StatusCode)
-		resp.Body.Close()
 		time.Sleep(2 * time.Second)
 	}
 
-	log.Printf("Failed to send callback after %d attempts", maxRetries)
+	log.Printf("All callback attempts failed")
 }
 
 // func GetPosts(c *gin.Context, driver selenium.WebDriver) {
