@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"os"
 	"strings"
 	"unicode"
 
@@ -17,19 +18,19 @@ func CryptoRandom(min, max int) int {
 	return int(n.Int64()) + min
 }
 
-// func PageScreenshot(driver selenium.WebDriver, fileName string) {
-// 	byteImg, err := driver.Screenshot()
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	f, err := os.Create("./screenshots/" + fileName + ".png")
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	f.Write(byteImg)
-// 	f.Close()
-// 	fmt.Printf("Screen save: %s\n", fileName)
-// }
+func PageScreenshot(driver selenium.WebDriver, fileName string) {
+	byteImg, err := driver.Screenshot()
+	if err != nil {
+		fmt.Println(err)
+	}
+	f, err := os.Create("./screenshots/" + fileName + ".png")
+	if err != nil {
+		fmt.Println(err)
+	}
+	f.Write(byteImg)
+	f.Close()
+	fmt.Printf("Screen save: %s\n", fileName)
+}
 
 // func SaveElementHTML(element selenium.WebElement, filename string) error {
 // 	html, err := element.GetAttribute("outerHTML")

@@ -4,16 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/tebeka/selenium"
-	"github.com/tebeka/selenium/chrome"
+	"sync"
 
 	"github.com/Extaleus/selenium-project/common"
+	"github.com/gin-gonic/gin"
+	"github.com/tebeka/selenium"
+	"github.com/tebeka/selenium/chrome"
 )
 
 type AuthRequest struct {
@@ -25,7 +27,14 @@ type LikesCountRequest struct {
 	LikesNeeded int `json:"likesneeded"`
 }
 
+var (
+	sseClients   = make(map[string]chan string) // taskID -> канал
+	sseClientsMu sync.Mutex
+)
+
 func main() {
+	r := gin.Default()
+
 	randNum, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	userDataDir := filepath.Join(os.TempDir(), fmt.Sprintf("chrome-data-%d", randNum))
 	defer os.RemoveAll(userDataDir)
@@ -63,32 +72,98 @@ func main() {
 		log.Fatal("Error:", err)
 	}
 
-	http.HandleFunc("/getcookies", func(w http.ResponseWriter, r *http.Request) {
-		GetCookies(w, r, driver)
+	//clean up cookies
+	CleanUpAllCookies(driver)
+
+	// Маршруты
+	r.GET("/getcookies", func(c *gin.Context) {
+		GetCookies(c, driver)
 	})
 
-	http.HandleFunc("/getposts", func(w http.ResponseWriter, r *http.Request) {
-		GetPosts(w, r, driver)
+	// r.GET("/getposts", func(c *gin.Context) {
+	// 	GetPosts(c, driver)
+	// })
+
+	// Измененный GET /getposts с SSE
+	r.POST("/getposts", func(c *gin.Context) {
+		var input LikesCountRequest
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+			return
+		}
+
+		taskID := fmt.Sprintf("task_%d", randNum.Int64())
+
+		// Создаем канал для SSE
+		sseClientsMu.Lock()
+		sseClients[taskID] = make(chan string)
+		sseClientsMu.Unlock()
+
+		// Запускаем сбор постов в фоне
+		go func() {
+			results := common.CollectPosts(driver, input.LikesNeeded)
+			jsonData, _ := json.Marshal(results)
+
+			sseClientsMu.Lock()
+			if ch, exists := sseClients[taskID]; exists {
+				ch <- string(jsonData)
+				close(ch)
+			}
+			sseClientsMu.Unlock()
+		}()
+
+		c.JSON(http.StatusOK, gin.H{"task_id": taskID})
 	})
 
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	// SSE эндпоинт для n8n
+	r.GET("/sse/:taskID", func(c *gin.Context) {
+		taskID := c.Param("taskID")
+
+		sseClientsMu.Lock()
+		eventChan, exists := sseClients[taskID]
+		sseClientsMu.Unlock()
+
+		if !exists {
+			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+			return
+		}
+
+		c.Stream(func(w io.Writer) bool {
+			select {
+			case msg, ok := <-eventChan:
+				if !ok {
+					return false
+				}
+				c.SSEvent("message", msg)
+				return false // Закрываем соединение после отправки
+			case <-c.Writer.CloseNotify():
+				return false
+			}
+		})
+
+		// Очистка
+		sseClientsMu.Lock()
+		delete(sseClients, taskID)
+		sseClientsMu.Unlock()
+	})
+
+	// Запуск сервера
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal("Failed to run server: ", err)
 	}
 }
 
-func GetCookies(w http.ResponseWriter, req *http.Request, driver selenium.WebDriver) {
-	w.Header().Set("Content-Type", "application/json")
-
-	if req.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func GetCookies(c *gin.Context, driver selenium.WebDriver) {
+	// Проверяем метод запроса
+	if c.Request.Method != "POST" {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
 		return
 	}
 
+	// Парсим тело запроса
 	var creds AuthRequest
-	err := json.NewDecoder(req.Body).Decode(&creds)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&creds); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 		return
 	}
 
@@ -96,39 +171,29 @@ func GetCookies(w http.ResponseWriter, req *http.Request, driver selenium.WebDri
 
 	allCookies, err := driver.GetCookies()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to get cookies",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get cookies"})
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"cookies": allCookies,
-	})
+	c.JSON(http.StatusOK, gin.H{"cookies": allCookies})
 }
 
-func GetPosts(w http.ResponseWriter, req *http.Request, driver selenium.WebDriver) {
-	w.Header().Set("Content-Type", "application/json")
+// func GetPosts(c *gin.Context, driver selenium.WebDriver) {
+// 	if c.Request.Method != "POST" {
+// 		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
+// 		return
+// 	}
 
-	if req.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+// 	var input LikesCountRequest
+// 	if err := c.ShouldBindJSON(&input); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+// 		return
+// 	}
 
-	var input LikesCountRequest
-	err := json.NewDecoder(req.Body).Decode(&input)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
+// 	results := common.CollectPosts(driver, input.LikesNeeded)
 
-	results := common.CollectPosts(driver, input.LikesNeeded)
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(results)
-}
+// 	c.JSON(http.StatusOK, results)
+// }
 
 //
 //
@@ -170,12 +235,12 @@ func GetPosts(w http.ResponseWriter, req *http.Request, driver selenium.WebDrive
 // 	fmt.Println("Успешно сохранили Cookies в allCookies.json")
 // }
 
-// func cleanUpAllCookies(driver selenium.WebDriver) {
-// 	err := driver.DeleteAllCookies()
-// 	if err != nil {
-// 		log.Printf("Не удалось удалить все cookies: %v", err)
-// 	}
-// }
+func CleanUpAllCookies(driver selenium.WebDriver) {
+	err := driver.DeleteAllCookies()
+	if err != nil {
+		log.Printf("Не удалось удалить все cookies: %v", err)
+	}
+}
 
 // func logOut(driver selenium.WebDriver) {
 // 	//find with waiting

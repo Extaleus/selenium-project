@@ -16,20 +16,20 @@ func AuthFlow(driver selenium.WebDriver, username, password string) {
 
 	driver.SetPageLoadTimeout(100 * time.Second)
 
-	//PageScreenshot(driver, "1")
+	PageScreenshot(driver, "1")
 	time.Sleep(10 * time.Second)
-	//PageScreenshot(driver, "2")
+	PageScreenshot(driver, "2")
 	time.Sleep(5 * time.Second)
 
 	acceptAllCookies(driver)
 
 	time.Sleep(5 * time.Second)
-	//PageScreenshot(driver, "5")
+	PageScreenshot(driver, "5")
 
 	continueWithInstagram(driver)
 
 	time.Sleep(5 * time.Second)
-	//PageScreenshot(driver, "6")
+	PageScreenshot(driver, "6")
 
 	foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 	if err == nil {
@@ -38,12 +38,12 @@ func AuthFlow(driver selenium.WebDriver, username, password string) {
 	}
 
 	time.Sleep(5 * time.Second)
-	//PageScreenshot(driver, "6")
+	PageScreenshot(driver, "6")
 
 	fillCredsAndLogin(driver, username, password)
 
 	time.Sleep(5 * time.Second)
-	//PageScreenshot(driver, "6.1")
+	PageScreenshot(driver, "6.1")
 
 	foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 	if err == nil {
@@ -52,7 +52,7 @@ func AuthFlow(driver selenium.WebDriver, username, password string) {
 	}
 
 	time.Sleep(10 * time.Second)
-	//PageScreenshot(driver, "10")
+	PageScreenshot(driver, "10")
 
 	//get cookies
 	// getAllCookies(driver)
@@ -80,8 +80,8 @@ func acceptAllCookies(driver selenium.WebDriver) {
 	}
 
 	time.Sleep(2 * time.Second)
-	//PageScreenshot(driver, "3")
-	//scroll to element
+	PageScreenshot(driver, "3")
+	// scroll to element
 
 	if err == nil {
 		driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
@@ -95,7 +95,7 @@ func acceptAllCookies(driver selenium.WebDriver) {
 	}
 
 	time.Sleep(2 * time.Second)
-	//PageScreenshot(driver, "4")
+	PageScreenshot(driver, "4")
 
 	fmt.Println("Успешно нажали на 'Разрешить все cookie'")
 }
@@ -161,7 +161,7 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	}
 
 	time.Sleep(1 * time.Second)
-	//PageScreenshot(driver, "8")
+	PageScreenshot(driver, "8")
 
 	//find with waiting
 	var elemPassword selenium.WebElement
@@ -190,7 +190,7 @@ func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
 	}
 
 	time.Sleep(1 * time.Second)
-	//PageScreenshot(driver, "9")
+	PageScreenshot(driver, "9")
 
 	//find with waiting
 	var elemSignInButton selenium.WebElement
