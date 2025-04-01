@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"os"
+	"net/http"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/gin-gonic/gin"
 	"github.com/tebeka/selenium"
 )
 
@@ -19,21 +20,28 @@ func CryptoRandom(min, max int) int {
 	return int(n.Int64()) + min
 }
 
-func PageScreenshot(driver selenium.WebDriver, fileName string) {
-	byteImg, err := driver.Screenshot()
+func CleanUpAllCookies(driver selenium.WebDriver) {
+	err := driver.DeleteAllCookies()
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Не удалось удалить все cookies: %v", err)
 	}
-	f, err := os.Create("./screenshots/" + fileName + ".png")
-	if err != nil {
-		fmt.Println(err)
-	}
-	f.Write(byteImg)
-	f.Close()
-	fmt.Printf("Screen save: %s\n", fileName)
 }
 
-func AcceptAllCookies(driver selenium.WebDriver) {
+// func PageScreenshot(driver selenium.WebDriver, fileName string) {
+// 	byteImg, err := driver.Screenshot()
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	f, err := os.Create("./screenshots/" + fileName + ".png")
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	f.Write(byteImg)
+// 	f.Close()
+// 	fmt.Printf("Screen save: %s\n", fileName)
+// }
+
+func AcceptAllCookies(c *gin.Context, driver selenium.WebDriver) {
 	var elemCookieAccept selenium.WebElement
 	//find with waiting
 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
@@ -41,8 +49,8 @@ func AcceptAllCookies(driver selenium.WebDriver) {
 		if err != nil {
 			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
 			if err != nil {
-				// return
-				fmt.Printf("не удалось найти кнопку 'Разрешить все cookie': %v", err)
+				return false, nil
+				// fmt.Printf("не удалось найти кнопку 'Разрешить все cookie': %v", err)
 			}
 			// elemCookieAccept = foundElem
 		}
@@ -51,26 +59,29 @@ func AcceptAllCookies(driver selenium.WebDriver) {
 		return visible, err
 	}, 10*time.Second)
 	if err != nil {
-		fmt.Printf("не удалось найти элемент: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+		// fmt.Printf("не удалось найти элемент: %v", err)
 	}
 
-	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "3")
+	// time.Sleep(2 * time.Second)
+	// PageScreenshot(driver, "3")
 	// scroll to element
 
-	if err == nil {
-		driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
+	driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
 
-		//click
-		time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
-		_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemCookieAccept})
-		if err != nil {
-			fmt.Printf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err)
-		}
+	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+	_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemCookieAccept})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// fmt.Printf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err)
+		return
 	}
 
-	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "4")
+	// time.Sleep(2 * time.Second)
+	// PageScreenshot(driver, "4")
+
+	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
 
 	fmt.Println("Успешно нажали на 'Разрешить все cookie'")
 }
@@ -194,7 +205,7 @@ func WaitForPageLoad(driver selenium.WebDriver) error {
 	})
 }
 
-func ParsePostEntities(driver selenium.WebDriver) []byte {
+func ParsePostEntities(c *gin.Context, driver selenium.WebDriver) []byte {
 	// fullHTML, err := driver.PageSource()
 	// if err != nil {
 	// 	log.Fatal("Не удалось получить HTML страницы:", err)
@@ -224,9 +235,12 @@ func ParsePostEntities(driver selenium.WebDriver) []byte {
 	// postEntity, err := driver.FindElements(selenium.ByXPATH, "(//div[@data-pressable-container='true'])[1]/*/*/*/div[1]")
 	// postEntity, err := driver.FindElements(selenium.ByXPATH, ".(//div[@data-pressable-container='true'])[1]/*/*/*/div[1]")
 	// postEntity, err := driver.FindElements(selenium.ByXPATH, "//div[@data-pressable-container='true']/*/*/*/div")
+
 	postEntity, err := driver.FindElements(selenium.ByXPATH, "//div[@data-pressable-container='true']/*/*/*/div")
 	if err != nil {
-		log.Printf("Ошибка поиска постов2: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// log.Printf("Ошибка поиска постов2: %v", err)
+		return nil
 		// continue
 	}
 
@@ -249,10 +263,12 @@ func ParsePostEntities(driver selenium.WebDriver) []byte {
 	result := parseData(data)
 	jsonData, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		fmt.Println("Error marshaling JSON:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return nil
+		// fmt.Println("Error marshaling JSON:", err)
 	}
 
-	fmt.Println(string(jsonData))
+	// fmt.Println(string(jsonData))
 
 	return jsonData
 
@@ -501,7 +517,6 @@ func parseData(data []string) Result {
 	// 	}
 	// }
 
-	// Парсинг ответов
 	for i < len(data) {
 		// Пропускаем пустые строки
 		if data[i] == "" {
@@ -509,16 +524,15 @@ func parseData(data []string) Result {
 			continue
 		}
 
-		// 1. Получаем username (первая непустая строка)
+		// 1. Получаем username
 		username := strings.Fields(data[i])[0]
 		i++
 
-		// Пропускаем пустые строки
 		for i < len(data) && data[i] == "" {
 			i++
 		}
 
-		// 2. Получаем description (следующая непустая строка)
+		// 2. Получаем description
 		if i >= len(data) {
 			break
 		}
@@ -530,16 +544,15 @@ func parseData(data []string) Result {
 			i++
 		}
 
-		// 3. Проверяем, есть ли likes (должны быть цифры или \n)
+		// 3. Проверяем, есть ли лайки (должны быть цифры или \n)
 		var likes string
-		if i < len(data) && isLikelyLikes(data[i]) {
+		if i < len(data) && isHaveLikes(data[i]) {
 			likes = data[i]
 			i++
 		} else {
 			likes = "0" // Если лайков нет, ставим 0
 		}
 
-		// Добавляем пост
 		post := Post{
 			Username:    username,
 			Description: strings.TrimSpace(description),
@@ -557,10 +570,7 @@ func parseData(data []string) Result {
 }
 
 func findMainPostEnd(data []string) int {
-	fmt.Printf("\n\n\n\ndata: %v\n\n\n\n\n\n", data)
-
 	for i, s := range data {
-		// if strings.Contains(s, "Смотреть действия") {
 		if strings.HasSuffix(s, "Share") {
 			return i
 		}
@@ -596,23 +606,21 @@ func parseMainPost(postData []string) Post {
 	return post
 }
 
-// Функция проверяет, является ли строка вероятными лайками (содержит цифры)
-func isLikelyLikes(s string) bool {
+func isHaveLikes(s string) bool {
 	if s == "" {
 		return false
 	}
 
-	// Проверяем, содержит ли строка хотя бы одну цифру
 	hasDigit := false
 	for _, r := range s {
 		if unicode.IsDigit(r) {
 			hasDigit = true
 		}
 		if r == '\n' {
-			continue // переносы строки допускаем
+			continue
 		}
 		if !unicode.IsDigit(r) && r != '\n' {
-			return false // если есть не-цифра и не перенос строки
+			return false
 		}
 	}
 

@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/tebeka/selenium"
 )
 
-func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
-	PageScreenshot(driver, "screen21")
+func CollectPosts(c *gin.Context, driver selenium.WebDriver, likesNeeded int) []Result {
+	// PageScreenshot(driver, "screen21")
 
 	err := driver.Get("https://www.threads.net/for_you")
 	if err != nil {
@@ -21,10 +22,10 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 	}
 
 	time.Sleep(10 * time.Second)
-	PageScreenshot(driver, "screen22")
+	// PageScreenshot(driver, "screen22")
 
 	time.Sleep(4 * time.Second)
-	PageScreenshot(driver, "screen23")
+	// PageScreenshot(driver, "screen23")
 
 	driver.SetPageLoadTimeout(100 * time.Second)
 
@@ -103,11 +104,11 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 			log.Printf("Ошибка поиска постов: %v", err)
 			// continue
 		}
-		PageScreenshot(driver, "screen23")
+		// PageScreenshot(driver, "screen23")
 
 		fmt.Println(len(posts))
 		for j := range posts {
-			PageScreenshot(driver, fmt.Sprintf("screen%d", j))
+			// PageScreenshot(driver, fmt.Sprintf("screen%d", j))
 			postText, err := posts[j].Text()
 			if err == nil {
 				html, err := posts[j].GetAttribute("innerHTML")
@@ -192,11 +193,11 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 								continue
 							}
 
-							PageScreenshot(driver, fmt.Sprintf("screen2-%d", j))
+							// PageScreenshot(driver, fmt.Sprintf("screen2-%d", j))
 
 							driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{targetElement})
 
-							PageScreenshot(driver, fmt.Sprintf("screen3-%d", j))
+							// PageScreenshot(driver, fmt.Sprintf("screen3-%d", j))
 
 							time.Sleep(time.Duration(CryptoRandom(300, 600)) * time.Millisecond)
 							_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{targetElement})
@@ -206,7 +207,7 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 
 							time.Sleep(1 * time.Second)
 							// PageScreenshot(driver, "clicked")
-							PageScreenshot(driver, fmt.Sprintf("screen3-%d", j))
+							// PageScreenshot(driver, fmt.Sprintf("screen3-%d", j))
 
 							time.Sleep(10 * time.Second)
 
@@ -232,7 +233,7 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 							// 	}
 							// }
 
-							parsedPost := ParsePostEntities(driver)
+							parsedPost := ParsePostEntities(c, driver)
 							result := Result{}
 							err = json.Unmarshal([]byte(parsedPost), &result)
 							if err != nil {
@@ -242,7 +243,7 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 
 							time.Sleep(1 * time.Second)
 							// PageScreenshot(driver, "after post parsing")
-							PageScreenshot(driver, fmt.Sprintf("screen4-%d", j))
+							// PageScreenshot(driver, fmt.Sprintf("screen4-%d", j))
 
 							script := "window.scrollTo(0, document.body.scrollHeight);"
 							if _, err := driver.ExecuteScript(script, nil); err != nil {
@@ -252,11 +253,11 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 							time.Sleep(1 * time.Second)
 							// PageScreenshot(driver, "after scroll post parsing")
 							// break
-							PageScreenshot(driver, fmt.Sprintf("screen5-%d", j))
+							// PageScreenshot(driver, fmt.Sprintf("screen5-%d", j))
 
 							driver.Back()
 							time.Sleep(5 * time.Second)
-							PageScreenshot(driver, fmt.Sprintf("screen6-%d", j))
+							// PageScreenshot(driver, fmt.Sprintf("screen6-%d", j))
 
 							time.Sleep(1 * time.Second)
 							// PageScreenshot(driver, "after back")
@@ -276,7 +277,7 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 		}
 
 		time.Sleep(5 * time.Second)
-		PageScreenshot(driver, "after scroll")
+		// PageScreenshot(driver, "after scroll")
 
 		break
 	}

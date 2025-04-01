@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/big"
 	"net/http"
@@ -24,13 +22,13 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
-type PostByLinkRequest struct {
+type GetPostRequest struct {
 	Link string `json:"link"`
 }
 
 type LikesCountRequest struct {
-	LikesNeeded int    `json:"likesneeded"`
-	CallbackURL string `json:"callback_url"`
+	LikesNeeded int `json:"likesneeded"`
+	// CallbackURL string `json:"callback_url"`
 }
 
 func main() {
@@ -73,7 +71,7 @@ func main() {
 		log.Fatal("Error:", err)
 	}
 
-	CleanUpAllCookies(driver)
+	common.CleanUpAllCookies(driver)
 
 	r.POST("/authorization", func(c *gin.Context) {
 		Authorization(c, driver)
@@ -83,34 +81,33 @@ func main() {
 		CheckAuth(c, driver)
 	})
 
-	r.POST("/getpostbylink", func(c *gin.Context) {
-		GetPostByLink(c, driver)
+	r.POST("/getpost", func(c *gin.Context) {
+		GetPost(c, driver)
 	})
 
-	r.POST("/getposts", func(c *gin.Context) {
-		var input LikesCountRequest
-		if err := c.ShouldBindJSON(&input); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-			return
-		}
+	// r.POST("/getposts", func(c *gin.Context) {
+	// 	var input LikesCountRequest
+	// 	if err := c.ShouldBindJSON(&input); err != nil {
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+	// 		return
+	// 	}
 
-		if input.CallbackURL == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "callback_url is required"})
-			return
-		}
+	// 	if input.CallbackURL == "" {
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": "callback_url is required"})
+	// 		return
+	// 	}
 
-		go func() {
-			results := common.CollectPosts(driver, input.LikesNeeded)
-			sendCallback(input.CallbackURL, results)
-		}()
+	// 	go func() {
+	// 		results := common.CollectPosts(driver, input.LikesNeeded)
+	// 		sendCallback(input.CallbackURL, results)
+	// 	}()
 
-		c.JSON(http.StatusAccepted, gin.H{
-			"status":  "processing",
-			"message": "Request accepted. Results will be sent to the callback URL",
-		})
-	})
+	// 	c.JSON(http.StatusAccepted, gin.H{
+	// 		"status":  "processing",
+	// 		"message": "Request accepted. Results will be sent to the callback URL",
+	// 	})
+	// })
 
-	// Запуск сервера
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("Failed to run server: ", err)
 	}
@@ -153,9 +150,11 @@ func CheckAuth(c *gin.Context, driver selenium.WebDriver) {
 		return
 	}
 
-	driver.SetPageLoadTimeout(30 * time.Second)
-
-	time.Sleep(20 * time.Second)
+	err = driver.SetPageLoadTimeout(30 * time.Second)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	err = common.WaitForPageLoad(driver)
 	if err != nil {
@@ -166,7 +165,7 @@ func CheckAuth(c *gin.Context, driver selenium.WebDriver) {
 	_, errRus := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 	_, errEng := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
 	if errRus == nil || errEng == nil {
-		common.AcceptAllCookies(driver)
+		common.AcceptAllCookies(c, driver)
 	}
 
 	_, errRus = driver.FindElement(selenium.ByXPATH, "//div[contains(text(), 'Войти')]]")
@@ -179,15 +178,13 @@ func CheckAuth(c *gin.Context, driver selenium.WebDriver) {
 	c.JSON(http.StatusOK, gin.H{"auth": true})
 }
 
-func GetPostByLink(c *gin.Context, driver selenium.WebDriver) {
-	// Проверяем метод запроса
+func GetPost(c *gin.Context, driver selenium.WebDriver) {
 	if c.Request.Method != "POST" {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
 		return
 	}
 
-	// Парсим тело запроса
-	var creds PostByLinkRequest
+	var creds GetPostRequest
 	if err := c.ShouldBindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 		return
@@ -195,86 +192,96 @@ func GetPostByLink(c *gin.Context, driver selenium.WebDriver) {
 
 	err := driver.Get(creds.Link)
 	if err != nil {
-		log.Fatal("Error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
 	}
 
-	driver.SetPageLoadTimeout(100 * time.Second)
+	err = driver.SetPageLoadTimeout(30 * time.Second)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
-	common.PageScreenshot(driver, "post screen 1")
+	// common.PageScreenshot(driver, "post screen 1")
 
-	time.Sleep(10 * time.Second)
+	// time.Sleep(10 * time.Second)
 
 	err = common.WaitForPageLoad(driver)
 	if err != nil {
-		log.Fatal("Page load error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Page not load"})
+		return
 	}
 
-	parsedPost := common.ParsePostEntities(driver)
+	time.Sleep(time.Duration(common.CryptoRandom(500, 2000)) * time.Millisecond)
+
+	parsedPost := common.ParsePostEntities(c, driver)
 	result := common.ResultOnePost{}
 	err = json.Unmarshal([]byte(parsedPost), &result)
 	if err != nil {
-		log.Fatal("Ошибка при распарсивании JSON:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// log.Fatal("Ошибка при распарсивании JSON:", err)
+		return
 	}
 
 	// time.Sleep(2 * time.Second)
 
-	common.PageScreenshot(driver, "post screen 2")
+	// common.PageScreenshot(driver, "post screen 2")
 
 	// common.AuthFlow(driver, creds.Username, creds.Password)
 
-	c.JSON(http.StatusOK, gin.H{"cookies": result})
+	c.JSON(http.StatusOK, gin.H{"response": result})
 }
 
-func sendCallback(url string, data interface{}) {
-	client := &http.Client{Timeout: 30 * time.Second} // Увеличиваем таймаут
+// func sendCallback(url string, data interface{}) {
+// 	client := &http.Client{Timeout: 30 * time.Second} // Увеличиваем таймаут
 
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Printf("JSON Marshal error: %v", err)
-		return
-	}
+// 	jsonData, err := json.Marshal(data)
+// 	if err != nil {
+// 		log.Printf("JSON Marshal error: %v", err)
+// 		return
+// 	}
 
-	log.Printf("Sending callback to: %s", url)
-	log.Printf("Payload: %s", string(jsonData))
+// 	log.Printf("Sending callback to: %s", url)
+// 	log.Printf("Payload: %s", string(jsonData))
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("Request creation failed: %v", err)
-		return
-	}
+// 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+// 	if err != nil {
+// 		log.Printf("Request creation failed: %v", err)
+// 		return
+// 	}
 
-	// Добавляем необходимые заголовки
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("n8n-test", "true") // Специальный заголовок для n8n test webhook
+// 	// Добавляем необходимые заголовки
+// 	req.Header.Set("Content-Type", "application/json")
+// 	req.Header.Set("n8n-test", "true") // Специальный заголовок для n8n test webhook
 
-	// Добавляем базовую аутентификацию если требуется
-	// req.SetBasicAuth("username", "password")
+// 	// Добавляем базовую аутентификацию если требуется
+// 	// req.SetBasicAuth("username", "password")
 
-	for i := 1; i <= 3; i++ {
-		log.Printf("Attempt %d...", i)
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Printf("Attempt %d failed: %v", i, err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
+// 	for i := 1; i <= 3; i++ {
+// 		log.Printf("Attempt %d...", i)
+// 		resp, err := client.Do(req)
+// 		if err != nil {
+// 			log.Printf("Attempt %d failed: %v", i, err)
+// 			time.Sleep(2 * time.Second)
+// 			continue
+// 		}
 
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+// 		body, _ := io.ReadAll(resp.Body)
+// 		resp.Body.Close()
 
-		log.Printf("Response status: %d", resp.StatusCode)
-		log.Printf("Response body: %s", string(body))
+// 		log.Printf("Response status: %d", resp.StatusCode)
+// 		log.Printf("Response body: %s", string(body))
 
-		if resp.StatusCode == http.StatusOK {
-			log.Printf("Callback delivered successfully")
-			return
-		}
+// 		if resp.StatusCode == http.StatusOK {
+// 			log.Printf("Callback delivered successfully")
+// 			return
+// 		}
 
-		time.Sleep(2 * time.Second)
-	}
+// 		time.Sleep(2 * time.Second)
+// 	}
 
-	log.Printf("All callback attempts failed")
-}
+// 	log.Printf("All callback attempts failed")
+// }
 
 // func GetPosts(c *gin.Context, driver selenium.WebDriver) {
 // 	if c.Request.Method != "POST" {
@@ -332,13 +339,6 @@ func sendCallback(url string, data interface{}) {
 // 	}
 // 	fmt.Println("Успешно сохранили Cookies в allCookies.json")
 // }
-
-func CleanUpAllCookies(driver selenium.WebDriver) {
-	err := driver.DeleteAllCookies()
-	if err != nil {
-		log.Printf("Не удалось удалить все cookies: %v", err)
-	}
-}
 
 // func logOut(driver selenium.WebDriver) {
 // 	//find with waiting

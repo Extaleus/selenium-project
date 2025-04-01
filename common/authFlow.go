@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -13,10 +12,16 @@ import (
 func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password string) {
 	err := driver.Get("https://www.threads.net/login/")
 	if err != nil {
-		log.Fatal("Error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+		// log.Fatal("Error:", err)
 	}
 
-	driver.SetPageLoadTimeout(30 * time.Second)
+	err = driver.SetPageLoadTimeout(30 * time.Second)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	err = WaitForPageLoad(driver)
 	if err != nil {
@@ -34,7 +39,7 @@ func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password stri
 	_, errRus := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 	_, errEng := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
 	if errRus == nil || errEng == nil {
-		AcceptAllCookies(driver)
+		AcceptAllCookies(c, driver)
 	}
 
 	// AcceptAllCookies(driver)
@@ -46,7 +51,11 @@ func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password stri
 
 	continueWithInstagram(c, driver)
 
-	driver.SetPageLoadTimeout(30 * time.Second)
+	err = driver.SetPageLoadTimeout(30 * time.Second)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	err = WaitForPageLoad(driver)
 	if err != nil {
@@ -59,7 +68,7 @@ func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password stri
 	_, errRus = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 	_, errEng = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
 	if errRus == nil || errEng == nil {
-		AcceptAllCookies(driver)
+		AcceptAllCookies(c, driver)
 	}
 
 	time.Sleep(time.Duration(CryptoRandom(1000, 2000)) * time.Millisecond)
@@ -81,7 +90,11 @@ func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password stri
 	// time.Sleep(5 * time.Second)
 	// PageScreenshot(driver, "6.1")
 
-	driver.SetPageLoadTimeout(30 * time.Second)
+	err = driver.SetPageLoadTimeout(30 * time.Second)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	err = WaitForPageLoad(driver)
 	if err != nil {
@@ -94,7 +107,7 @@ func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password stri
 	_, errRus = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
 	_, errEng = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
 	if errRus == nil || errEng == nil {
-		AcceptAllCookies(driver)
+		AcceptAllCookies(c, driver)
 	}
 
 	// foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
