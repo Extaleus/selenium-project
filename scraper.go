@@ -155,6 +155,8 @@ func CheckAuth(c *gin.Context, driver selenium.WebDriver) {
 
 	driver.SetPageLoadTimeout(30 * time.Second)
 
+	time.Sleep(20 * time.Second)
+
 	err = common.WaitForPageLoad(driver)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Page not load"})
