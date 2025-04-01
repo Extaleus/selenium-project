@@ -3,104 +3,114 @@ package common
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/tebeka/selenium"
 )
 
-func AuthFlow(driver selenium.WebDriver, username, password string) {
+func AuthFlow(c *gin.Context, driver selenium.WebDriver, username, password string) {
 	err := driver.Get("https://www.threads.net/login/")
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
 
-	driver.SetPageLoadTimeout(100 * time.Second)
+	driver.SetPageLoadTimeout(30 * time.Second)
 
-	PageScreenshot(driver, "1")
-	time.Sleep(10 * time.Second)
-	PageScreenshot(driver, "2")
-	time.Sleep(5 * time.Second)
-
-	acceptAllCookies(driver)
-
-	time.Sleep(5 * time.Second)
-	PageScreenshot(driver, "5")
-
-	continueWithInstagram(driver)
-
-	time.Sleep(5 * time.Second)
-	PageScreenshot(driver, "6")
-
-	foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
-	if err == nil {
-		fmt.Printf(foundElem.Text())
-		acceptAllCookies(driver)
+	err = WaitForPageLoad(driver)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Page not load"})
+		return
 	}
 
-	time.Sleep(5 * time.Second)
-	PageScreenshot(driver, "6")
+	time.Sleep(time.Duration(CryptoRandom(1000, 5000)) * time.Millisecond)
 
-	fillCredsAndLogin(driver, username, password)
+	// // PageScreenshot(driver, "1")
+	// time.Sleep(10 * time.Second)
+	// // PageScreenshot(driver, "2")
+	// time.Sleep(5 * time.Second)
 
-	time.Sleep(5 * time.Second)
-	PageScreenshot(driver, "6.1")
-
-	foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
-	if err == nil {
-		fmt.Printf(foundElem.Text())
-		acceptAllCookies(driver)
+	_, errRus := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	_, errEng := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
+	if errRus == nil || errEng == nil {
+		AcceptAllCookies(driver)
 	}
 
-	time.Sleep(10 * time.Second)
-	PageScreenshot(driver, "10")
+	// AcceptAllCookies(driver)
+
+	time.Sleep(time.Duration(CryptoRandom(500, 2000)) * time.Millisecond)
+
+	// time.Sleep(5 * time.Second)
+	// PageScreenshot(driver, "5")
+
+	continueWithInstagram(c, driver)
+
+	driver.SetPageLoadTimeout(30 * time.Second)
+
+	err = WaitForPageLoad(driver)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Page not load"})
+		return
+	}
+
+	time.Sleep(time.Duration(CryptoRandom(1000, 5000)) * time.Millisecond)
+
+	_, errRus = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	_, errEng = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
+	if errRus == nil || errEng == nil {
+		AcceptAllCookies(driver)
+	}
+
+	time.Sleep(time.Duration(CryptoRandom(1000, 2000)) * time.Millisecond)
+
+	// time.Sleep(5 * time.Second)
+	// PageScreenshot(driver, "6")
+
+	// foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	// if err == nil {
+	// 	fmt.Printf(foundElem.Text())
+	// 	AcceptAllCookies(driver)
+	// }
+
+	// time.Sleep(5 * time.Second)
+	// PageScreenshot(driver, "6")
+
+	fillCredsAndLogin(c, driver, username, password)
+
+	// time.Sleep(5 * time.Second)
+	// PageScreenshot(driver, "6.1")
+
+	driver.SetPageLoadTimeout(30 * time.Second)
+
+	err = WaitForPageLoad(driver)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Page not load"})
+		return
+	}
+
+	time.Sleep(time.Duration(CryptoRandom(1000, 5000)) * time.Millisecond)
+
+	_, errRus = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	_, errEng = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
+	if errRus == nil || errEng == nil {
+		AcceptAllCookies(driver)
+	}
+
+	// foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	// if err == nil {
+	// 	fmt.Printf(foundElem.Text())
+	// 	AcceptAllCookies(driver)
+	// }
+
+	// time.Sleep(10 * time.Second)
+	// PageScreenshot(driver, "10")
 
 	//get cookies
 	// getAllCookies(driver)
 }
 
-func acceptAllCookies(driver selenium.WebDriver) {
-	var elemCookieAccept selenium.WebElement
-	//find with waiting
-	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
-		foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
-		if err != nil {
-			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
-			if err != nil {
-				// return
-				fmt.Printf("не удалось найти кнопку 'Разрешить все cookie': %v", err)
-			}
-			// elemCookieAccept = foundElem
-		}
-		elemCookieAccept = foundElem
-		visible, err := foundElem.IsDisplayed()
-		return visible, err
-	}, 10*time.Second)
-	if err != nil {
-		fmt.Printf("не удалось найти элемент: %v", err)
-	}
-
-	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "3")
-	// scroll to element
-
-	if err == nil {
-		driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
-
-		//click
-		time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
-		_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemCookieAccept})
-		if err != nil {
-			fmt.Printf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err)
-		}
-	}
-
-	time.Sleep(2 * time.Second)
-	PageScreenshot(driver, "4")
-
-	fmt.Println("Успешно нажали на 'Разрешить все cookie'")
-}
-
-func continueWithInstagram(driver selenium.WebDriver) {
+func continueWithInstagram(c *gin.Context, driver selenium.WebDriver) {
 	//find with waiting
 	var elemContinueWithInstagram selenium.WebElement
 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
@@ -108,16 +118,18 @@ func continueWithInstagram(driver selenium.WebDriver) {
 		if err != nil {
 			foundElem, err = driver.FindElement(selenium.ByXPATH, "//a[.//span[contains(text(), 'Continue with Instagram')]]")
 			if err != nil {
-				panic(fmt.Errorf("не удалось найти кнопку 'Продолжить с аккаунтом Instagram': %v", err))
+				// c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+				return false, err
 			}
-			// elemContinueWithInstagram = foundElem
 		}
 		elemContinueWithInstagram = foundElem
 		visible, err := foundElem.IsDisplayed()
 		return visible, err
 	}, 10*time.Second)
 	if err != nil {
-		panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+		// panic(fmt.Errorf("не удалось найти элемент: %v", err))
 	}
 
 	//scroll to element
@@ -128,94 +140,113 @@ func continueWithInstagram(driver selenium.WebDriver) {
 	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
 	_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemContinueWithInstagram})
 	if err != nil {
-		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Продолжить с аккаунтом Instagram': %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+		// panic(fmt.Errorf("не удалось кликнуть по кнопке 'Продолжить с аккаунтом Instagram': %v", err))
 	}
+
 	fmt.Println("Успешно нажали на 'Продолжить с аккаунтом Instagram'")
 }
 
-func fillCredsAndLogin(driver selenium.WebDriver, username, password string) {
-	//find with waiting
+func fillCredsAndLogin(c *gin.Context, driver selenium.WebDriver, username, password string) {
 	var elemUsername selenium.WebElement
 	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Имя пользователя, номер телефона или электронный адрес']")
 		if err != nil {
 			foundElem, err = driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Username, phone or email']")
 			if err != nil {
-				panic(fmt.Errorf("не удалось найти кнопку 'Имя пользователя, номер телефона или электронный адрес': %v", err))
+				// c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+				// panic(fmt.Errorf("не удалось найти кнопку 'Имя пользователя, номер телефона или электронный адрес': %v", err))
+				return false, err
 			}
-			// elemUsername = foundElem
 		}
 		elemUsername = foundElem
 		visible, err := foundElem.IsDisplayed()
 		return visible, err
 	}, 10*time.Second)
 	if err != nil {
-		panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		return
 	}
 
-	//fill input
 	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+
 	err = elemUsername.SendKeys(username)
 	if err != nil {
-		panic(fmt.Errorf("не удалось ввести 'username': %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// panic(fmt.Errorf("не удалось ввести 'username': %v", err))
+		return
 	}
 
-	time.Sleep(1 * time.Second)
-	PageScreenshot(driver, "8")
+	// time.Sleep(1 * time.Second)
+	// PageScreenshot(driver, "8")
 
-	//find with waiting
+	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+
 	var elemPassword selenium.WebElement
 	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Пароль']")
 		if err != nil {
 			foundElem, err = driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Password']")
 			if err != nil {
-				panic(fmt.Errorf("не удалось найти кнопку 'Пароль': %v", err))
+				// c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+				// panic(fmt.Errorf("не удалось найти кнопку 'Пароль': %v", err))
+				return false, err
 			}
-			// elemPassword = foundElem
 		}
 		elemPassword = foundElem
 		visible, err := foundElem.IsDisplayed()
 		return visible, err
 	}, 10*time.Second)
 	if err != nil {
-		panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		return
 	}
 
-	//fill input
 	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+
 	err = elemPassword.SendKeys(password)
 	if err != nil {
-		panic(fmt.Errorf("не удалось ввести 'password': %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// panic(fmt.Errorf("не удалось ввести 'password': %v", err))
+		return
 	}
 
-	time.Sleep(1 * time.Second)
-	PageScreenshot(driver, "9")
+	// time.Sleep(1 * time.Second)
+	// PageScreenshot(driver, "9")
+	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
 
-	//find with waiting
 	var elemSignInButton selenium.WebElement
 	err = driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
 		foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Войти')]]")
 		if err != nil {
 			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Log in')]]")
 			if err != nil {
-				panic(fmt.Errorf("не удалось найти кнопку 'Войти': %v", err))
+				// c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+				// panic(fmt.Errorf("не удалось найти кнопку 'Войти': %v", err))
+				return false, err
 			}
-			// elemSignInButton = foundElem
 		}
 		elemSignInButton = foundElem
 		visible, err := foundElem.IsDisplayed()
 		return visible, err
 	}, 10*time.Second)
 	if err != nil {
-		panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// panic(fmt.Errorf("не удалось найти элемент: %v", err))
+		return
 	}
 
-	//click
 	time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+
 	_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemSignInButton})
 	if err != nil {
-		panic(fmt.Errorf("не удалось кликнуть по кнопке 'Войти': %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		// panic(fmt.Errorf("не удалось кликнуть по кнопке 'Войти': %v", err))
+		return
 	}
+
 	fmt.Println("Успешно нажали на 'Вход'")
 }

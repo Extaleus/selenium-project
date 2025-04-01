@@ -73,22 +73,19 @@ func main() {
 		log.Fatal("Error:", err)
 	}
 
-	//clean up cookies
 	CleanUpAllCookies(driver)
 
-	// Маршруты
-	r.POST("/getcookies", func(c *gin.Context) {
-		GetCookies(c, driver)
+	r.POST("/authorization", func(c *gin.Context) {
+		Authorization(c, driver)
 	})
 
-	// Маршруты
+	r.GET("/checkauth", func(c *gin.Context) {
+		CheckAuth(c, driver)
+	})
+
 	r.POST("/getpostbylink", func(c *gin.Context) {
 		GetPostByLink(c, driver)
 	})
-
-	// r.GET("/getposts", func(c *gin.Context) {
-	// 	GetPosts(c, driver)
-	// })
 
 	r.POST("/getposts", func(c *gin.Context) {
 		var input LikesCountRequest
@@ -97,13 +94,11 @@ func main() {
 			return
 		}
 
-		// Валидация callback URL
 		if input.CallbackURL == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "callback_url is required"})
 			return
 		}
 
-		// Запускаем сбор постов в фоне
 		go func() {
 			results := common.CollectPosts(driver, input.LikesNeeded)
 			sendCallback(input.CallbackURL, results)
@@ -121,21 +116,21 @@ func main() {
 	}
 }
 
-func GetCookies(c *gin.Context, driver selenium.WebDriver) {
-	// Проверяем метод запроса
+func Authorization(c *gin.Context, driver selenium.WebDriver) {
 	if c.Request.Method != "POST" {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
 		return
 	}
 
-	// Парсим тело запроса
 	var creds AuthRequest
 	if err := c.ShouldBindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 		return
 	}
 
-	common.AuthFlow(driver, creds.Username, creds.Password)
+	common.AuthFlow(c, driver, creds.Username, creds.Password)
+
+	time.Sleep(time.Duration(common.CryptoRandom(1000, 2000)) * time.Millisecond)
 
 	allCookies, err := driver.GetCookies()
 	if err != nil {
@@ -144,6 +139,42 @@ func GetCookies(c *gin.Context, driver selenium.WebDriver) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"cookies": allCookies})
+}
+
+func CheckAuth(c *gin.Context, driver selenium.WebDriver) {
+	if c.Request.Method != "GET" {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
+		return
+	}
+
+	err := driver.Get("https://www.threads.net/for_you")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	driver.SetPageLoadTimeout(30 * time.Second)
+
+	err = common.WaitForPageLoad(driver)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Page not load"})
+		return
+	}
+
+	_, errRus := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+	_, errEng := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
+	if errRus == nil || errEng == nil {
+		common.AcceptAllCookies(driver)
+	}
+
+	_, errRus = driver.FindElement(selenium.ByXPATH, "//div[contains(text(), 'Войти')]]")
+	_, errEng = driver.FindElement(selenium.ByXPATH, "//div[contains(text(), 'Log in')]]")
+	if errRus == nil || errEng == nil {
+		c.JSON(http.StatusOK, gin.H{"auth": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"auth": true})
 }
 
 func GetPostByLink(c *gin.Context, driver selenium.WebDriver) {

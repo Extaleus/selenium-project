@@ -33,7 +33,7 @@ func CollectPosts(driver selenium.WebDriver, likesNeeded int) []Result {
 	// // pageScreenshot(driver, "screen2")
 	// // time.Sleep(2 * time.Second)
 
-	// // acceptAllCookies(driver)
+	// // AcceptAllCookies(driver)
 
 	// // time.Sleep(2 * time.Second)
 	// // pageScreenshot(driver, "screen3")

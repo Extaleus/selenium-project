@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/tebeka/selenium"
@@ -30,6 +31,48 @@ func PageScreenshot(driver selenium.WebDriver, fileName string) {
 	f.Write(byteImg)
 	f.Close()
 	fmt.Printf("Screen save: %s\n", fileName)
+}
+
+func AcceptAllCookies(driver selenium.WebDriver) {
+	var elemCookieAccept selenium.WebElement
+	//find with waiting
+	err := driver.WaitWithTimeout(func(wd selenium.WebDriver) (bool, error) {
+		foundElem, err := driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Разрешить все cookie')]]")
+		if err != nil {
+			foundElem, err = driver.FindElement(selenium.ByXPATH, "//div[@role='button' and .//div[contains(text(), 'Allow all cookies')]]")
+			if err != nil {
+				// return
+				fmt.Printf("не удалось найти кнопку 'Разрешить все cookie': %v", err)
+			}
+			// elemCookieAccept = foundElem
+		}
+		elemCookieAccept = foundElem
+		visible, err := foundElem.IsDisplayed()
+		return visible, err
+	}, 10*time.Second)
+	if err != nil {
+		fmt.Printf("не удалось найти элемент: %v", err)
+	}
+
+	time.Sleep(2 * time.Second)
+	PageScreenshot(driver, "3")
+	// scroll to element
+
+	if err == nil {
+		driver.ExecuteScript("arguments[0].scrollIntoView({block: 'center'});", []interface{}{elemCookieAccept})
+
+		//click
+		time.Sleep(time.Duration(CryptoRandom(300, 500)) * time.Millisecond)
+		_, err = driver.ExecuteScript("arguments[0].click();", []interface{}{elemCookieAccept})
+		if err != nil {
+			fmt.Printf("не удалось кликнуть по кнопке 'Разрешить все cookie': %v", err)
+		}
+	}
+
+	time.Sleep(2 * time.Second)
+	PageScreenshot(driver, "4")
+
+	fmt.Println("Успешно нажали на 'Разрешить все cookie'")
 }
 
 // func SaveElementHTML(element selenium.WebElement, filename string) error {
